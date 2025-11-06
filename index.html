@@ -66,14 +66,12 @@
         <div id="commentsContainer" style="margin-top:12px;"></div>
     </div>
 
-    <!-- Firebase SDK -->
+    <!-- Firebase + Supabase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
         import {
             getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp
         } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-
-        // ✅ Supabase SDK
         import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
         // 🔥 Firebase 配置
@@ -87,11 +85,12 @@
             measurementId: "G-YEW0X7YB17"
         };
 
-        // ✅ Supabase 配置（替换为你自己的）
+        // ✅ Supabase 配置
         const supabaseUrl = "https://isnamqcyzimvlmaiczeu.supabase.co";
-        const supabaseKey = "你的 anon 公钥";
+        const supabaseKey = "你的 anon 公钥"; // ⚠️替换成你的 Supabase anon key
         const supabase = createClient(supabaseUrl, supabaseKey);
 
+        // 初始化 Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
@@ -109,10 +108,11 @@
                 const el = document.createElement('div');
                 el.className = "comment";
                 el.innerHTML = `
-                        <div><strong>${c.name || '访客'}</strong> <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span></div>
-                        <div>${c.text || ''}</div>
-                        ${c.fileUrl ? `<a class="file-link" href="${c.fileUrl}" target="_blank">📎 ${c.fileName}</a>` : ''}
-                    `;
+              <div><strong>${c.name || '访客'}</strong>
+              <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span></div>
+              <div>${c.text || ''}</div>
+              ${c.fileUrl ? `<a class="file-link" href="${c.fileUrl}" target="_blank">📎 ${c.fileName}</a>` : ''}
+            `;
                 commentsContainer.appendChild(el);
             });
             if (!snap.size) commentsContainer.innerHTML = "<div class='small muted'>暂无评论</div>";
@@ -130,12 +130,14 @@
 
             const file = fileInput.files[0];
             if (file) {
+                // ✅ 修复文件名：去除特殊字符 + URL 安全编码
+                const safeName = encodeURIComponent(file.name.replace(/[^\w.-]/g, '_'));
                 fileName = file.name;
-                const filePath = `uploads/${Date.now()}_${file.name}`;
+                const filePath = `uploads/${Date.now()}_${safeName}`;
 
-                // ✅ 上传到 Supabase Storage 的 "p" bucket
+                // ✅ 上传文件到 Supabase Storage
                 const { data, error } = await supabase.storage
-                    .from('p') // 你的 bucket 名称
+                    .from('p') // 你的 bucket 名
                     .upload(filePath, file);
 
                 if (error) {
@@ -144,7 +146,7 @@
                     return;
                 }
 
-                // ✅ 获取可公开访问的 URL
+                // ✅ 获取公开 URL
                 const { data: publicData } = supabase.storage
                     .from('p')
                     .getPublicUrl(filePath);
@@ -166,3 +168,4 @@
     </script>
 </body>
 </html>
+
