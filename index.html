@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>自然窥探者 · Firebase + Supabase 上传测试</title>
+    <title>自然窥探者 · H₂ 分子电子云可视化 + Supabase 上传</title>
     <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
@@ -43,33 +43,19 @@
             border-radius: var(--radius);
             box-shadow: var(--shadow);
             padding: 16px;
-            max-width: 680px;
+            max-width: 720px;
             margin: 40px auto;
             backdrop-filter: blur(10px);
         }
 
-        .about {
-            text-align: center;
-            font-size: 14px;
-            color: var(--muted);
-            margin-top: 20px;
-            line-height: 1.6;
-        }
-
-            .about b {
-                color: var(--accent);
-            }
-
-        h2 {
+        h2, h3 {
+            color: #fff;
             font-weight: 700;
-            letter-spacing: 0.5px;
-            color: #ffffff;
         }
 
-        .comment {
-            border-top: 1px solid rgba(255, 255, 255, 0.15);
-            margin-top: 8px;
-            padding-top: 8px;
+        .small {
+            font-size: 13px;
+            color: var(--muted);
         }
 
         .file-link {
@@ -78,11 +64,6 @@
             text-decoration: underline;
             font-size: 13px;
             margin-top: 4px;
-        }
-
-        .small {
-            font-size: 13px;
-            color: var(--muted);
         }
 
         button {
@@ -94,21 +75,13 @@
             cursor: pointer;
             font-weight: 600;
             transition: 0.2s;
-            margin: 2px;
+            margin: 3px;
         }
 
             button:hover {
                 background: #2563eb;
                 transform: scale(1.03);
             }
-
-        .lang-switch {
-            float: right;
-            font-size: 13px;
-            color: var(--muted);
-            cursor: pointer;
-            user-select: none;
-        }
 
         input, textarea {
             background: rgba(255,255,255,0.1);
@@ -125,8 +98,10 @@
                 background: rgba(255,255,255,0.15);
             }
 
-        .plot-container {
+        .about {
             text-align: center;
+            font-size: 14px;
+            color: var(--muted);
             margin-top: 20px;
         }
     </style>
@@ -135,48 +110,43 @@
     <div id="particles-js"></div>
 
     <div class="card">
-        <div>
-            <h2 id="title">自然窥探者 · Firebase + Supabase 上传测试</h2>
-            <span class="lang-switch" id="langToggle">🌐 English</span>
-        </div>
+        <h2>自然窥探者 · Firebase + Supabase 上传测试</h2>
+        <p class="small">上传 PDF 或图片评论，全网可见</p>
 
-        <p class="small" id="desc">上传 PDF 或图片评论，全网可见</p>
-
-        <input id="cName" type="text" placeholder="名字 (必填)" style="margin-top:6px;"><br>
-        <input id="cEmail" type="email" placeholder="邮箱 (可选)" style="margin-top:6px;"><br>
-        <textarea id="cText" placeholder="评论内容 (必填)" style="min-height:80px;margin-top:6px;"></textarea><br>
-        <input id="cFile" type="file" accept="application/pdf,image/png,image/jpeg" style="margin-top:6px;"><br>
-        <button id="addComment" style="margin-top:8px;">提交评论</button>
-
-        <div id="uploadStatus" class="small" style="margin-top:4px;"></div>
+        <input id="cName" type="text" placeholder="名字 (必填)"><br>
+        <input id="cEmail" type="email" placeholder="邮箱 (可选)"><br>
+        <textarea id="cText" placeholder="评论内容 (必填)" style="min-height:80px;"></textarea><br>
+        <input id="cFile" type="file" accept="application/pdf,image/png,image/jpeg"><br>
+        <button id="addComment">提交评论</button>
+        <div id="uploadStatus" class="small"></div>
         <div id="storageUsage" class="small" style="margin-top:10px;"></div>
-
         <div id="commentsContainer" style="margin-top:12px;"></div>
-
-        <div class="about">
-            <b>Otto Von Davinstar</b><br>
-            “If you want to find the secrets of the universe,<br>
-            think in terms of energy, frequency and vibration.”<br>
-            — N. Tesla
-        </div>
     </div>
 
-    <!-- ✨ 氢原子波函数展示区域 -->
-    <div class="card plot-container">
-        <h3>🔬 氢原子波函数可视化 / Hydrogen Wave Functions</h3>
-        <div>
-            <button onclick="plotPsi('100')">ψ₁₀₀</button>
-            <button onclick="plotPsi('200')">ψ₂₀₀</button>
-            <button onclick="plotPsi('210')">ψ₂₁₀</button>
-            <button onclick="plotPsi('211')">ψ₂₁₁</button>
-        </div>
-        <div id="wavePlot" style="width:100%;height:400px;margin-top:10px;"></div>
+    <!-- 🧠 H₂ 分子电子云可视化 -->
+    <div class="card">
+        <h3>⚛️ H₂ 分子电子云：海特勒–伦敦 vs 分子轨道理论</h3>
+        <p class="small">
+            蓝色：海特勒–伦敦共价结合（价键理论）<br>
+            红色：分子轨道理论的 σ 结合轨道（成键）<br>
+            灰色：σ* 反结合轨道（反键）
+        </p>
+        <button onclick="plotH2('HL')">海特勒–伦敦模型</button>
+        <button onclick="plotH2('MO')">分子轨道模型</button>
+        <div id="h2plot" style="width:100%;height:480px;margin-top:10px;"></div>
     </div>
 
+    <div class="about">
+        <b>Otto Von Davinstar</b><br>
+        “If you want to find the secrets of the universe,<br>
+        think in terms of energy, frequency and vibration.”<br>
+        — N. Tesla
+    </div>
+
+    <!-- 🔧 Firebase + Supabase 主逻辑 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp }
-            from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
         import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
         const firebaseConfig = {
@@ -187,77 +157,32 @@
             messagingSenderId: "870998893975",
             appId: "1:870998893975:web:ce4b1d412168e07b5390d2"
         };
-
         const supabaseUrl = "https://isnamqcyzimvlmaiczeu.supabase.co";
         const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzbmFtcWN5emltdmxtYWljemV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTQwODEsImV4cCI6MjA3ODAzMDA4MX0.WcwFDqu-22xMWanw3mWqrIN2M1llNBI-bDrO3QkmlMI";
         const supabase = createClient(supabaseUrl, supabaseKey);
         const db = getFirestore(initializeApp(firebaseConfig));
 
-        const addBtn = document.getElementById('addComment');
-        const commentsContainer = document.getElementById('commentsContainer');
         const statusEl = document.getElementById('uploadStatus');
         const usageEl = document.getElementById('storageUsage');
-        const langToggle = document.getElementById('langToggle');
-        let lang = 'zh';
-
-        const texts = {
-            zh: {
-                title: "自然窥探者 · Firebase + Supabase 上传测试",
-                desc: "上传 PDF 或图片评论，全网可见",
-                submit: "提交评论",
-                name: "名字 (必填)",
-                email: "邮箱 (可选)",
-                comment: "评论内容 (必填)",
-                switch: "🌐 English"
-            },
-            en: {
-                title: "Natural Observer · Firebase + Supabase Upload Demo",
-                desc: "Upload PDFs or images — visible to everyone worldwide.",
-                submit: "Post Comment",
-                name: "Name (required)",
-                email: "Email (optional)",
-                comment: "Comment (required)",
-                switch: "🌐 中文"
-            }
-        };
-
-        function switchLang() {
-            lang = lang === 'zh' ? 'en' : 'zh';
-            const t = texts[lang];
-            document.getElementById('title').textContent = t.title;
-            document.getElementById('desc').textContent = t.desc;
-            document.getElementById('addComment').textContent = t.submit;
-            document.getElementById('cName').placeholder = t.name;
-            document.getElementById('cEmail').placeholder = t.email;
-            document.getElementById('cText').placeholder = t.comment;
-            langToggle.textContent = t.switch;
-        }
-        langToggle.addEventListener('click', switchLang);
+        const addBtn = document.getElementById('addComment');
+        const commentsContainer = document.getElementById('commentsContainer');
 
         async function showStorageUsage() {
             try {
                 let totalBytes = 0;
                 const { data, error } = await supabase.storage.from('p').list('uploads', { limit: 1000 });
                 if (error) throw error;
-                for (const file of data) if (file.metadata?.size) totalBytes += Number(file.metadata.size);
-
+                for (const f of data) if (f.metadata?.size) totalBytes += Number(f.metadata.size);
                 const usedMB = (totalBytes / (1024 * 1024)).toFixed(2);
-                const totalMB = 1024;
-                const remainMB = (totalMB - usedMB).toFixed(2);
-                const percent = Math.min(((usedMB / totalMB) * 100).toFixed(1), 100);
-                let color = "#22c55e"; if (percent > 70) color = "#f59e0b"; if (percent > 90) color = "#ef4444";
-
-                usageEl.innerHTML = `
-              💾 当前使用：<b>${usedMB} MB</b> / ${totalMB} MB
-              （剩余 <b>${remainMB} MB</b>）
-              <div style="background:rgba(255,255,255,0.2);border-radius:6px;overflow:hidden;margin-top:4px;height:8px;">
-                <div style="width:${percent}%;background:${color};height:8px;"></div>
-              </div>`;
-            } catch { usageEl.textContent = "⚠️ Storage info unavailable"; }
+                const remainMB = (1024 - usedMB).toFixed(2);
+                const percent = Math.min(((usedMB / 1024) * 100).toFixed(1), 100);
+                usageEl.innerHTML = `💾 已用 <b>${usedMB} MB</b> / 1024 MB （剩余 ${remainMB} MB）`;
+            } catch {
+                usageEl.textContent = "⚠️ 无法获取存储用量";
+            }
         }
 
         async function renderComments() {
-            commentsContainer.innerHTML = "<div class='small'>加载中...</div>";
             const q = query(collection(db, "comments"), orderBy("ts", "desc"));
             const snap = await getDocs(q);
             commentsContainer.innerHTML = "";
@@ -265,11 +190,8 @@
                 const c = doc.data();
                 const el = document.createElement('div');
                 el.className = "comment";
-                el.innerHTML = `
-              <div><strong>${c.name || '访客 / Guest'}</strong>
-              <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span></div>
-              <div>${c.text || ''}</div>
-              ${c.fileUrl ? `<a class="file-link" href="${c.fileUrl}" target="_blank">📎 ${c.fileName}</a>` : ''}`;
+                el.innerHTML = `<div><strong>${c.name}</strong> <span class="small">${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ""}</span></div>
+            <div>${c.text}</div>${c.fileUrl ? `<a class="file-link" href="${c.fileUrl}" target="_blank">📎 ${c.fileName}</a>` : ""}`;
                 commentsContainer.appendChild(el);
             });
             if (!snap.size) commentsContainer.innerHTML = "<div class='small muted'>暂无评论 / No comments</div>";
@@ -277,69 +199,75 @@
 
         addBtn.addEventListener('click', async () => {
             const name = document.getElementById('cName').value.trim();
-            const email = document.getElementById('cEmail').value.trim();
             const text = document.getElementById('cText').value.trim();
             const fileInput = document.getElementById('cFile');
             if (!name || !text) return alert("请填写名字和评论内容");
-
             statusEl.textContent = "正在上传...";
             let fileUrl = "", fileName = "";
             const file = fileInput.files[0];
             if (file) {
                 fileName = file.name;
-                const safeName = encodeURIComponent(file.name.replace(/[^\w.\-]/g, '_'));
-                const filePath = `uploads/${Date.now()}_${safeName}`;
-                const { error } = await supabase.storage.from('p').upload(filePath, file);
-                if (!error) fileUrl = supabase.storage.from('p').getPublicUrl(filePath).data.publicUrl;
+                const path = `uploads/${Date.now()}_${fileName.replace(/[^\w.\-]/g, "_")}`;
+                const { error } = await supabase.storage.from('p').upload(path, file);
+                if (!error) fileUrl = supabase.storage.from('p').getPublicUrl(path).data.publicUrl;
             }
-
-            await addDoc(collection(db, "comments"), { name, email, text, fileUrl, fileName, ts: serverTimestamp() });
-            statusEl.textContent = "✅ 已上传并发布";
+            await addDoc(collection(db, "comments"), { name, text, fileUrl, fileName, ts: serverTimestamp() });
+            statusEl.textContent = "✅ 上传成功";
             renderComments(); showStorageUsage();
-            fileInput.value = ""; document.getElementById('cText').value = "";
         });
 
         renderComments(); showStorageUsage();
     </script>
 
+    <!-- 🌌 H₂ 分子三维电子云绘图 -->
     <script>
-        // 💡 氢原子波函数可视化函数
-        function plotPsi(type) {
-            const r = Array.from({ length: 200 }, (_, i) => i * 0.05);
-            let psi;
-            switch (type) {
-                case '100': psi = r.map(x => 2 * Math.exp(-x)); break;
-                case '200': psi = r.map(x => (1 / Math.sqrt(2)) * (1 - x / 2) * Math.exp(-x / 2)); break;
-                case '210': psi = r.map(x => (1 / (2 * Math.sqrt(6))) * x * Math.exp(-x / 2)); break;
-                case '211': psi = r.map(x => (1 / (4 * Math.sqrt(3))) * x * Math.exp(-x / 2)); break;
-                default: psi = r.map(() => 0);
+        function plotH2(model) {
+            const x = [], y = [], z = [], psi = [];
+            const R = 1.4; // H-H 距离约 1.4 a₀
+            for (let i = -20; i <= 20; i++) {
+                for (let j = -20; j <= 20; j++) {
+                    for (let k = -20; k <= 20; k++) {
+                        const X = i * 0.1, Y = j * 0.1, Z = k * 0.1;
+                        const rA = Math.sqrt((X - R / 2) ** 2 + Y ** 2 + Z ** 2);
+                        const rB = Math.sqrt((X + R / 2) ** 2 + Y ** 2 + Z ** 2);
+                        const phiA = Math.exp(-rA);
+                        const phiB = Math.exp(-rB);
+                        let val = 0;
+                        if (model === 'HL') val = phiA * phiB; // 共价态简化
+                        if (model === 'MO') val = phiA + phiB; // σ 成键轨道
+                        x.push(X); y.push(Y); z.push(Z); psi.push(Math.abs(val));
+                    }
+                }
             }
-            const prob = psi.map(y => y * y);
-            Plotly.newPlot("wavePlot", [{
-                x: r, y: prob, mode: "lines", line: { width: 3 },
-                name: `|ψ${type}|²`
-            }], {
-                title: `|ψ${type}(r)|² 概率密度分布`,
-                xaxis: { title: "r / a₀" },
-                yaxis: { title: "|ψ|²" },
-                paper_bgcolor: "rgba(0,0,0,0)",
-                plot_bgcolor: "rgba(0,0,0,0)",
-                font: { color: "#f1f5f9" }
-            });
+            const trace = {
+                x, y, z, mode: 'markers',
+                marker: {
+                    size: 2,
+                    color: psi,
+                    colorscale: model === 'HL' ? 'Blues' : 'Reds',
+                    opacity: 0.5
+                },
+                type: 'scatter3d'
+            };
+            const layout = {
+                title: model === 'HL' ? '海特勒–伦敦共价态电子云' : '分子轨道 σ 成键电子云',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#fff' },
+                scene: {
+                    xaxis: { title: 'x (a₀)' },
+                    yaxis: { title: 'y (a₀)' },
+                    zaxis: { title: 'z (a₀)' }
+                }
+            };
+            Plotly.newPlot('h2plot', [trace], layout);
         }
 
         particlesJS("particles-js", {
             particles: {
-                number: { value: 90, density: { enable: true, value_area: 800 } },
-                color: { value: "#60a5fa" },
-                shape: { type: "circle" },
-                opacity: { value: 0.5 },
-                size: { value: 2 },
-                line_linked: { enable: true, distance: 120, color: "#60a5fa", opacity: 0.3, width: 1 },
-                move: { enable: true, speed: 1.3, out_mode: "bounce" }
-            },
-            interactivity: { events: { onhover: { enable: true, mode: "repulse" } }, modes: { repulse: { distance: 100 } } },
-            retina_detect: true
+                number: { value: 90 }, color: { value: "#60a5fa" },
+                opacity: { value: 0.5 }, size: { value: 2 }, move: { speed: 1.3 }
+            }
         });
     </script>
 </body>
