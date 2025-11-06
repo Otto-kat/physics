@@ -3,17 +3,18 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Firebase + Supabase 文件上传示例</title>
+    <title>自然科学交流站 · Science Forum</title>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
     <style>
         :root {
-            --bg: #f6f8fb;
-            --card: #fff;
-            --text: #0f1720;
-            --muted: #6b7280;
-            --accent: #2563eb;
+            --bg: #0d1117;
+            --card: rgba(255, 255, 255, 0.08);
+            --text: #e6edf3;
+            --muted: #9ca3af;
+            --accent: #3b82f6;
             --accent-contrast: #fff;
             --radius: 12px;
-            --shadow: 0 6px 20px rgba(15,23,40,0.06);
+            --shadow: 0 6px 20px rgba(15,23,40,0.3);
         }
 
         body {
@@ -21,7 +22,17 @@
             background: var(--bg);
             color: var(--text);
             margin: 0;
-            padding: 16px;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        #particles-js {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
         }
 
         .card {
@@ -29,12 +40,13 @@
             border-radius: var(--radius);
             box-shadow: var(--shadow);
             padding: 16px;
-            max-width: 640px;
-            margin: 0 auto;
+            max-width: 680px;
+            margin: 40px auto;
+            backdrop-filter: blur(10px);
         }
 
         .comment {
-            border-top: 1px solid #e2e8f0;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
             margin-top: 8px;
             padding-top: 8px;
         }
@@ -51,97 +63,160 @@
             font-size: 13px;
             color: var(--muted);
         }
+
+        button {
+            background: var(--accent);
+            color: var(--accent-contrast);
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+            button:hover {
+                background: #2563eb;
+            }
+
+        .lang-switch {
+            float: right;
+            font-size: 13px;
+            color: var(--muted);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        input, textarea {
+            background: rgba(255,255,255,0.08);
+            color: var(--text);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            padding: 6px;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>Firebase + Supabase 上传示例</h2>
-        <p class="small">上传 PDF/图片评论，全网可见</p>
+    <div id="particles-js"></div>
 
-        <input id="cName" type="text" placeholder="名字 (必填)" style="width:100%;margin-top:6px;"><br>
-        <input id="cEmail" type="email" placeholder="邮箱 (可选)" style="width:100%;margin-top:6px;"><br>
-        <textarea id="cText" placeholder="评论内容 (必填)" style="width:100%;min-height:80px;margin-top:6px;"></textarea><br>
+    <div class="card">
+        <div>
+            <h2 id="title">自然科学交流站 · Science Forum</h2>
+            <span class="lang-switch" id="langToggle">🌐 English</span>
+        </div>
+
+        <p class="small" id="desc">上传 PDF 或图片评论，全网可见</p>
+
+        <input id="cName" type="text" placeholder="名字 (必填)" style="margin-top:6px;"><br>
+        <input id="cEmail" type="email" placeholder="邮箱 (可选)" style="margin-top:6px;"><br>
+        <textarea id="cText" placeholder="评论内容 (必填)" style="min-height:80px;margin-top:6px;"></textarea><br>
         <input id="cFile" type="file" accept="application/pdf,image/png,image/jpeg" style="margin-top:6px;"><br>
         <button id="addComment" style="margin-top:8px;">提交评论</button>
 
         <div id="uploadStatus" class="small" style="margin-top:4px;"></div>
+        <div id="storageUsage" class="small" style="margin-top:10px;"></div>
+
         <div id="commentsContainer" style="margin-top:12px;"></div>
     </div>
 
+    <!-- 🧠 脚本 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-        import {
-            getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp
-        } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp }
+            from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
         import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-        // 🔥 Firebase 配置
         const firebaseConfig = {
             apiKey: "AIzaSyCPDiyZtMUe_RNudnvXmaZGUfwhJjKVXOs",
             authDomain: "my-light-site.firebaseapp.com",
             projectId: "my-light-site",
             storageBucket: "my-light-site.appspot.com",
             messagingSenderId: "870998893975",
-            appId: "1:870998893975:web:ce4b1d412168e07b5390d2",
-            measurementId: "G-YEW0X7YB17"
+            appId: "1:870998893975:web:ce4b1d412168e07b5390d2"
         };
 
-        // ✅ Supabase 配置
         const supabaseUrl = "https://isnamqcyzimvlmaiczeu.supabase.co";
         const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzbmFtcWN5emltdmxtYWljemV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTQwODEsImV4cCI6MjA3ODAzMDA4MX0.WcwFDqu-22xMWanw3mWqrIN2M1llNBI-bDrO3QkmlMI";
         const supabase = createClient(supabaseUrl, supabaseKey);
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        const db = getFirestore(initializeApp(firebaseConfig));
 
         const addBtn = document.getElementById('addComment');
         const commentsContainer = document.getElementById('commentsContainer');
         const statusEl = document.getElementById('uploadStatus');
+        const usageEl = document.getElementById('storageUsage');
+        const langToggle = document.getElementById('langToggle');
 
-        // 🗑️ 自动清理 10 天前文件
-        async function autoCleanOldFiles() {
+        let lang = 'zh';
+
+        const texts = {
+            zh: {
+                title: "自然科学交流站 · Science Forum",
+                desc: "上传 PDF 或图片评论，全网可见",
+                submit: "提交评论",
+                name: "名字 (必填)",
+                email: "邮箱 (可选)",
+                comment: "评论内容 (必填)",
+                switch: "🌐 English"
+            },
+            en: {
+                title: "Science Forum · Global Discussion",
+                desc: "Upload PDFs or images — visible to everyone worldwide.",
+                submit: "Post Comment",
+                name: "Name (required)",
+                email: "Email (optional)",
+                comment: "Comment (required)",
+                switch: "🌐 中文"
+            }
+        };
+
+        function switchLang() {
+            lang = lang === 'zh' ? 'en' : 'zh';
+            const t = texts[lang];
+            document.getElementById('title').textContent = t.title;
+            document.getElementById('desc').textContent = t.desc;
+            document.getElementById('addComment').textContent = t.submit;
+            document.getElementById('cName').placeholder = t.name;
+            document.getElementById('cEmail').placeholder = t.email;
+            document.getElementById('cText').placeholder = t.comment;
+            langToggle.textContent = t.switch;
+        }
+
+        langToggle.addEventListener('click', switchLang);
+
+        // =========================
+        // 💾 Supabase 存储统计
+        // =========================
+        async function showStorageUsage() {
             try {
+                let totalBytes = 0;
                 const { data, error } = await supabase.storage.from('p').list('uploads', { limit: 1000 });
                 if (error) throw error;
-                const now = Date.now();
-                const oldFiles = data.filter(f => f.created_at && (now - new Date(f.created_at).getTime()) > 10 * 24 * 60 * 60 * 1000);
-                for (const file of oldFiles) {
-                    await supabase.storage.from('p').remove([`uploads/${file.name}`]);
-                    console.log(`🧹 已删除旧文件：${file.name}`);
-                }
-            } catch (err) {
-                console.error('自动清理文件出错:', err);
-            }
-        }
+                for (const file of data) if (file.metadata?.size) totalBytes += Number(file.metadata.size);
 
-        // 💾 显示 Supabase 存储容量
-        async function showStorageUsage() {
-            const usageEl = document.createElement('div');
-            usageEl.className = 'small';
-            usageEl.style.marginTop = '10px';
-            document.querySelector('.card').appendChild(usageEl);
-
-            try {
-                const { data, error } = await supabase.from('storage.objects').select('metadata');
-                if (error) throw error;
-
-                const totalBytes = data.reduce((sum, obj) => sum + (Number(obj.metadata?.size || 0)), 0);
                 const usedMB = (totalBytes / (1024 * 1024)).toFixed(2);
-                const totalMB = 1024; // 免费层 1GB
-                const percent = ((usedMB / totalMB) * 100).toFixed(1);
+                const totalMB = 1024;
+                const remainMB = (totalMB - usedMB).toFixed(2);
+                const percent = Math.min(((usedMB / totalMB) * 100).toFixed(1), 100);
+
+                let color = "#22c55e";
+                if (percent > 70) color = "#f59e0b";
+                if (percent > 90) color = "#ef4444";
 
                 usageEl.innerHTML = `
-                        💾 当前存储使用：<b>${usedMB} MB</b> / ${totalMB} MB (${percent}%)
-                        <div style="background:#eee;border-radius:6px;overflow:hidden;margin-top:4px;height:8px;">
-                            <div style="width:${percent}%;background:#2563eb;height:8px;"></div>
-                        </div>
-                    `;
-            } catch (err) {
-                console.error('获取存储容量失败:', err);
+              💾 ${lang === 'zh' ? '当前使用' : 'Used'}：<b>${usedMB} MB</b> / ${totalMB} MB
+              （${lang === 'zh' ? '剩余' : 'Remaining'} <b>${remainMB} MB</b>）
+              <div style="background:rgba(255,255,255,0.2);border-radius:6px;overflow:hidden;margin-top:4px;height:8px;">
+                <div style="width:${percent}%;background:${color};height:8px;"></div>
+              </div>
+            `;
+            } catch {
+                usageEl.textContent = "⚠️ Storage info unavailable";
             }
         }
 
+        // =========================
         // 💬 渲染评论
+        // =========================
         async function renderComments() {
             commentsContainer.innerHTML = "<div class='small'>加载中...</div>";
             const q = query(collection(db, "comments"), orderBy("ts", "desc"));
@@ -152,69 +227,68 @@
                 const el = document.createElement('div');
                 el.className = "comment";
                 el.innerHTML = `
-                        <div><strong>${c.name || '访客'}</strong>
-                        <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span></div>
-                        <div>${c.text || ''}</div>
-                        ${c.fileUrl ? `<a class="file-link" href="${c.fileUrl}" target="_blank">📎 ${c.fileName}</a>` : ''}
-                    `;
+              <div><strong>${c.name || '访客 / Guest'}</strong>
+              <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span></div>
+              <div>${c.text || ''}</div>
+              ${c.fileUrl ? `<a class="file-link" href="${c.fileUrl}" target="_blank">📎 ${c.fileName}</a>` : ''}
+            `;
                 commentsContainer.appendChild(el);
             });
-            if (!snap.size) commentsContainer.innerHTML = "<div class='small muted'>暂无评论</div>";
+            if (!snap.size) commentsContainer.innerHTML = "<div class='small muted'>暂无评论 / No comments</div>";
         }
 
+        // =========================
         // 📤 上传评论
+        // =========================
         addBtn.addEventListener('click', async () => {
             const name = document.getElementById('cName').value.trim();
             const email = document.getElementById('cEmail').value.trim();
             const text = document.getElementById('cText').value.trim();
             const fileInput = document.getElementById('cFile');
-            if (!name || !text) return alert("请填写名字和评论内容");
+            if (!name || !text) return alert(lang === 'zh' ? "请填写名字和评论内容" : "Please fill in name and comment");
 
-            statusEl.textContent = "正在上传...";
+            statusEl.textContent = lang === 'zh' ? "正在上传..." : "Uploading...";
             let fileUrl = "", fileName = "";
 
             const file = fileInput.files[0];
             if (file) {
                 fileName = file.name;
-                const asciiName = file.name.normalize('NFKD').replace(/[^\x00-\x7F]/g, '');
-                const safeName = encodeURIComponent(asciiName.replace(/[^\w.\-]/g, '_') || Date.now().toString());
+                const safeName = encodeURIComponent(file.name.replace(/[^\w.\-]/g, '_'));
                 const filePath = `uploads/${Date.now()}_${safeName}`;
-
-                try {
-                    const { error } = await supabase.storage.from('p').upload(filePath, file, {
-                        cacheControl: '3600',
-                        contentType: file.type,
-                        upsert: false
-                    });
-                    if (error) throw error;
-                    const { data: publicData } = supabase.storage.from('p').getPublicUrl(filePath);
-                    fileUrl = publicData.publicUrl;
-                } catch (err) {
-                    console.error("Supabase upload error:", err);
-                    statusEl.textContent = "上传失败：" + (err.message || String(err));
-                    return;
-                }
+                const { error } = await supabase.storage.from('p').upload(filePath, file);
+                if (!error) fileUrl = supabase.storage.from('p').getPublicUrl(filePath).data.publicUrl;
             }
 
-            try {
-                await addDoc(collection(db, "comments"), {
-                    name, email, text, fileUrl, fileName, ts: serverTimestamp()
-                });
-                statusEl.textContent = "✅ 已上传并发布";
-                fileInput.value = "";
-                document.getElementById('cText').value = "";
-                renderComments();
-                showStorageUsage(); // 上传后刷新使用量
-            } catch (e) {
-                console.error("Firestore save error:", e);
-                statusEl.textContent = "保存评论失败：" + (e.message || e);
-            }
+            await addDoc(collection(db, "comments"), { name, email, text, fileUrl, fileName, ts: serverTimestamp() });
+            statusEl.textContent = lang === 'zh' ? "✅ 已上传并发布" : "✅ Uploaded successfully";
+            renderComments();
+            showStorageUsage();
+            fileInput.value = "";
+            document.getElementById('cText').value = "";
         });
 
-        // 页面加载时执行
         renderComments();
         showStorageUsage();
-        autoCleanOldFiles();
+    </script>
+
+    <script>
+        // ✨ 粒子物理动画背景
+        particlesJS("particles-js", {
+            particles: {
+                number: { value: 90, density: { enable: true, value_area: 800 } },
+                color: { value: "#3b82f6" },
+                shape: { type: "circle" },
+                opacity: { value: 0.5 },
+                size: { value: 2 },
+                line_linked: { enable: true, distance: 120, color: "#3b82f6", opacity: 0.3, width: 1 },
+                move: { enable: true, speed: 1.5, out_mode: "bounce" }
+            },
+            interactivity: {
+                events: { onhover: { enable: true, mode: "repulse" } },
+                modes: { repulse: { distance: 100 } }
+            },
+            retina_detect: true
+        });
     </script>
 </body>
 </html>
