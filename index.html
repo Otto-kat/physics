@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>轻简示例 — 云端评论与文件上传（Firebase版）</title>
+    <title>Firebase 云端评论与文件上传示例</title>
     <style>
         /* 保留原样式 */
         :root {
@@ -14,190 +14,70 @@
             --accent: #2563eb;
             --accent-contrast: #fff;
             --radius: 12px;
-            --shadow: 0 6px 20px rgba(15,23,40,0.06)
-        }
-
-        [data-theme="dark"] {
-            --bg: #071126;
-            --card: #071828;
-            --text: #e6eef8;
-            --muted: #9fb2d1;
-            --accent: #60a5fa;
-            --accent-contrast: #001028;
-            --shadow: 0 8px 26px rgba(0,0,0,0.6)
-        }
-
-        * {
-            box-sizing: border-box
+            --shadow: 0 6px 20px rgba(15,23,40,0.06);
         }
 
         body {
-            margin: 0;
             font-family: Inter,"Microsoft YaHei",system-ui,Arial;
             background: var(--bg);
-            color: var(--text)
-        }
-
-        .wrap {
-            max-width: 980px;
-            margin: 28px auto;
-            padding: 16px
-        }
-
-        header {
-            display: flex;
-            align-items: center;
-            gap: 14px
-        }
-
-        .logo {
-            width: 48px;
-            height: 48px;
-            display: grid;
-            place-items: center;
-            border-radius: 10px;
-            background: linear-gradient(135deg,var(--accent),#0ea5e9);
-            color: var(--accent-contrast);
-            font-weight: 700
-        }
-
-        h1 {
-            font-size: 18px;
-            margin: 0
-        }
-
-        p.lead {
-            margin: 4px 0 0;
-            color: var(--muted);
-            font-size: 14px
-        }
-
-        nav {
-            margin-left: auto;
-            display: flex;
-            gap: 8px;
-            align-items: center
-        }
-
-        .btn {
-            background: var(--accent);
-            color: var(--accent-contrast);
-            padding: 8px 12px;
-            border-radius: 10px;
-            border: none;
-            cursor: pointer;
-            font-weight: 600
-        }
-
-        .ghost {
-            background: transparent;
-            border: 1px solid rgba(0,0,0,0.06);
-            padding: 8px 10px;
-            border-radius: 10px
-        }
-
-        main {
-            display: grid;
-            grid-template-columns: 1fr 360px;
-            gap: 18px;
-            margin-top: 18px
-        }
-
-        @media(max-width:980px) {
-            main {
-                grid-template-columns: 1fr
-            }
+            color: var(--text);
+            margin: 0;
+            padding: 16px;
         }
 
         .card {
             background: var(--card);
             border-radius: var(--radius);
+            box-shadow: var(--shadow);
             padding: 16px;
-            box-shadow: var(--shadow)
-        }
-
-        .comments-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 12px
+            max-width: 640px;
+            margin: 0 auto;
         }
 
         .comment {
-            display: flex;
-            gap: 12px;
-            padding: 12px;
-            border-radius: 10px;
-            background: linear-gradient(180deg,rgba(0,0,0,0.01),transparent)
-        }
-
-        .avatar {
-            width: 44px;
-            height: 44px;
-            border-radius: 8px;
-            background: linear-gradient(135deg,#e2e8f0,#c7d2fe);
-            display: grid;
-            place-items: center;
-            font-weight: 700
-        }
-
-        .comment-body {
-            flex: 1
-        }
-
-        .meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 8px
-        }
-
-        .small {
-            font-size: 13px;
-            color: var(--muted)
+            border-top: 1px solid #e2e8f0;
+            margin-top: 8px;
+            padding-top: 8px;
         }
 
         .file-link {
             display: inline-block;
-            margin-top: 6px;
-            font-size: 13px;
             color: var(--accent);
             text-decoration: underline;
-            cursor: pointer
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        .small {
+            font-size: 13px;
+            color: var(--muted);
         }
     </style>
 </head>
-<body data-theme="light">
-    <div class="wrap">
-        <header>
-            <div class="logo">LN</div>
-            <div>
-                <h1 id="siteTitle">Firebase 云端轻简示例</h1>
-                <p class="lead">上传 PDF/图片评论，全网可见</p>
-            </div>
-        </header>
-
-        <main>
-            <section class="card">
-                <h3>留言区</h3>
-                <input id="cName" type="text" placeholder="名字 (必填)" />
-                <input id="cEmail" type="email" placeholder="邮箱 (可选)" />
-                <textarea id="cText" placeholder="评论内容 (必填)" style="width:100%;min-height:80px"></textarea>
-                <input id="cFile" type="file" accept="application/pdf,image/png,image/jpeg" />
-                <button class="btn" id="addComment">提交评论</button>
-                <div id="uploadStatus" class="small muted" style="margin-top:6px"></div>
-                <div class="comments-list" id="commentsContainer"></div>
-            </section>
-        </main>
+<body>
+    <div class="card">
+        <h2>Firebase 云端轻简示例</h2>
+        <p class="small">上传 PDF/图片评论，全网可见</p>
+        <input id="cName" type="text" placeholder="名字 (必填)" style="width:100%;margin-top:6px;"><br>
+        <input id="cEmail" type="email" placeholder="邮箱 (可选)" style="width:100%;margin-top:6px;"><br>
+        <textarea id="cText" placeholder="评论内容 (必填)" style="width:100%;min-height:80px;margin-top:6px;"></textarea><br>
+        <input id="cFile" type="file" accept="application/pdf,image/png,image/jpeg" style="margin-top:6px;"><br>
+        <button id="addComment" style="margin-top:8px;">提交评论</button>
+        <div id="uploadStatus" class="small" style="margin-top:4px;"></div>
+        <div id="commentsContainer" style="margin-top:12px;"></div>
     </div>
 
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-storage.js";
+        import {
+            getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+        import {
+            getStorage, ref, uploadBytesResumable, getDownloadURL
+        } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-storage.js";
 
-        // 你的 Firebase 配置（修改 storageBucket 为 .appspot.com 结尾）
+        // 🔥 你的 Firebase 配置
         const firebaseConfig = {
             apiKey: "AIzaSyCPDiyZtMUe_RNudnvXmaZGUfwhJjKVXOs",
             authDomain: "my-light-site.firebaseapp.com",
@@ -224,14 +104,11 @@
             snap.forEach(doc => {
                 const c = doc.data();
                 const el = document.createElement('div');
-                el.className = 'comment';
+                el.className = "comment";
                 el.innerHTML = `
-              <div class="avatar">${(c.name || '访客').slice(0, 2)}</div>
-              <div class="comment-body">
-                <div class="meta"><strong>${c.name || '访客'}</strong><div class="small">${c.ts?.toDate ? c.ts.toDate().toLocaleString() : '刚刚'}</div></div>
-                <div style="margin-top:6px">${c.text || ''}</div>
-                ${c.fileUrl ? `<a href="${c.fileUrl}" target="_blank" class="file-link">📎 ${c.fileName}</a>` : ''}
-              </div>
+              <div><strong>${c.name || '访客'}</strong> <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span></div>
+              <div>${c.text || ''}</div>
+              ${c.fileUrl ? `<a class="file-link" href="${c.fileUrl}" target="_blank">📎 ${c.fileName}</a>` : ''}
             `;
                 commentsContainer.appendChild(el);
             });
@@ -243,24 +120,40 @@
             const email = document.getElementById('cEmail').value.trim();
             const text = document.getElementById('cText').value.trim();
             const fileInput = document.getElementById('cFile');
-            if (!name || !text) { alert("请填写名字和评论内容"); return; }
+            if (!name || !text) return alert("请填写名字和评论内容");
 
             statusEl.textContent = "正在上传...";
-            let fileUrl = '', fileName = '';
+            let fileUrl = "", fileName = "";
+
             const file = fileInput.files[0];
             if (file) {
                 fileName = file.name;
-                const fileRef = ref(storage, 'uploads/' + Date.now() + '_' + file.name);
-                await uploadBytes(fileRef, file);
-                fileUrl = await getDownloadURL(fileRef);
+                const fileRef = ref(storage, `uploads/${Date.now()}_${file.name}`);
+                // ✅ 改用带进度回调的 uploadBytesResumable
+                const uploadTask = uploadBytesResumable(fileRef, file);
+
+                await new Promise((resolve, reject) => {
+                    uploadTask.on('state_changed',
+                        (snapshot) => {
+                            const progress = (snapshot.bytesTransferred / snapshot.totalBytes * 100).toFixed(0);
+                            statusEl.textContent = `上传中... ${progress}%`;
+                        },
+                        (error) => reject(error),
+                        async () => {
+                            fileUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                            resolve();
+                        }
+                    );
+                });
             }
 
             await addDoc(collection(db, "comments"), {
                 name, email, text, fileUrl, fileName, ts: serverTimestamp()
             });
 
-            statusEl.textContent = "✅ 已上传";
-            fileInput.value = ''; document.getElementById('cText').value = '';
+            statusEl.textContent = "✅ 已上传并发布";
+            fileInput.value = "";
+            document.getElementById('cText').value = "";
             renderComments();
         });
 
