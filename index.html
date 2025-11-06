@@ -3,9 +3,8 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>自然窥探者 · H₂ 分子电子云可视化 + Supabase 上传</title>
+    <title>自然窥探者 · H₂ 分子波函数可视化 + Supabase 上传</title>
     <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         :root {
             --bg1: #101522;
@@ -25,7 +24,6 @@
             color: var(--text);
             margin: 0;
             padding: 0;
-            overflow-x: hidden;
             min-height: 100vh;
         }
 
@@ -104,14 +102,23 @@
             color: var(--muted);
             margin-top: 20px;
         }
+
+        .formula {
+            font-family: "Times New Roman", serif;
+            background: rgba(255,255,255,0.08);
+            padding: 8px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <div id="particles-js"></div>
 
     <div class="card">
-        <h2>自然窥探者 · Firebase + Supabase 上传测试</h2>
-        <p class="small">上传 PDF 或图片评论，全网可见</p>
+        <h2 id="title">自然窥探者 · Firebase + Supabase 上传测试</h2>
+        <button id="langToggle">English</button>
+        <p class="small" id="desc">上传 PDF 或图片评论，全网可见</p>
 
         <input id="cName" type="text" placeholder="名字 (必填)"><br>
         <input id="cEmail" type="email" placeholder="邮箱 (可选)"><br>
@@ -123,17 +130,20 @@
         <div id="commentsContainer" style="margin-top:12px;"></div>
     </div>
 
-    <!-- 🧠 H₂ 分子电子云可视化 -->
+    <!-- 🧠 H₂ 分子基态与三重态表达式 -->
     <div class="card">
-        <h3>⚛️ H₂ 分子电子云：海特勒–伦敦 vs 分子轨道理论</h3>
-        <p class="small">
-            蓝色：海特勒–伦敦共价结合（价键理论）<br>
-            红色：分子轨道理论的 σ 结合轨道（成键）<br>
-            灰色：σ* 反结合轨道（反键）
-        </p>
-        <button onclick="plotH2('HL')">海特勒–伦敦模型</button>
-        <button onclick="plotH2('MO')">分子轨道模型</button>
-        <div id="h2plot" style="width:100%;height:480px;margin-top:10px;"></div>
+        <h3 id="h2title">⚛️ H₂ 分子波函数表达式</h3>
+        <div id="h2formulas">
+            <div class="formula" id="singlet">
+                <b>基态（单重态，Singlet）：</b><br>
+                ψ<sub>singlet</sub> = N [φ<sub>A</sub>(1)φ<sub>B</sub>(2) + φ<sub>B</sub>(1)φ<sub>A</sub>(2)] × (α(1)β(2) − β(1)α(2))
+            </div>
+            <div class="formula" id="triplet">
+                <b>三重态（Triplet）：</b><br>
+                ψ<sub>triplet</sub> = N [φ<sub>A</sub>(1)φ<sub>B</sub>(2) − φ<sub>B</sub>(1)φ<sub>A</sub>(2)] × χ<sub>triplet</sub><br>
+                其中 χ<sub>triplet</sub> ∈ {α(1)α(2), (α(1)β(2)+β(1)α(2))/√2, β(1)β(2)}
+            </div>
+        </div>
     </div>
 
     <div class="about">
@@ -175,7 +185,6 @@
                 for (const f of data) if (f.metadata?.size) totalBytes += Number(f.metadata.size);
                 const usedMB = (totalBytes / (1024 * 1024)).toFixed(2);
                 const remainMB = (1024 - usedMB).toFixed(2);
-                const percent = Math.min(((usedMB / 1024) * 100).toFixed(1), 100);
                 usageEl.innerHTML = `💾 已用 <b>${usedMB} MB</b> / 1024 MB （剩余 ${remainMB} MB）`;
             } catch {
                 usageEl.textContent = "⚠️ 无法获取存储用量";
@@ -219,48 +228,40 @@
         renderComments(); showStorageUsage();
     </script>
 
-    <!-- 🌌 H₂ 分子三维电子云绘图 -->
+    <!-- 🌐 中英文切换逻辑 -->
     <script>
-        function plotH2(model) {
-            const x = [], y = [], z = [], psi = [];
-            const R = 1.4; // H-H 距离约 1.4 a₀
-            for (let i = -20; i <= 20; i++) {
-                for (let j = -20; j <= 20; j++) {
-                    for (let k = -20; k <= 20; k++) {
-                        const X = i * 0.1, Y = j * 0.1, Z = k * 0.1;
-                        const rA = Math.sqrt((X - R / 2) ** 2 + Y ** 2 + Z ** 2);
-                        const rB = Math.sqrt((X + R / 2) ** 2 + Y ** 2 + Z ** 2);
-                        const phiA = Math.exp(-rA);
-                        const phiB = Math.exp(-rB);
-                        let val = 0;
-                        if (model === 'HL') val = phiA * phiB; // 共价态简化
-                        if (model === 'MO') val = phiA + phiB; // σ 成键轨道
-                        x.push(X); y.push(Y); z.push(Z); psi.push(Math.abs(val));
-                    }
-                }
+        const langToggle = document.getElementById("langToggle");
+        let lang = "zh";
+
+        langToggle.addEventListener("click", () => {
+            lang = lang === "zh" ? "en" : "zh";
+            updateLang();
+        });
+
+        function updateLang() {
+            if (lang === "en") {
+                langToggle.textContent = "中文";
+                document.getElementById("title").textContent = "Nature Explorer · Firebase + Supabase Upload Test";
+                document.getElementById("desc").textContent = "Upload PDF or image comments, visible to all";
+                document.getElementById("addComment").textContent = "Submit Comment";
+                document.getElementById("h2title").textContent = "⚛️ H₂ Molecular Wavefunction Expressions";
+                document.getElementById("singlet").innerHTML = `<b>Ground State (Singlet):</b><br>
+            ψ<sub>singlet</sub> = N [φ<sub>A</sub>(1)φ<sub>B</sub>(2) + φ<sub>B</sub>(1)φ<sub>A</sub>(2)] × (α(1)β(2) − β(1)α(2))`;
+                document.getElementById("triplet").innerHTML = `<b>Excited State (Triplet):</b><br>
+            ψ<sub>triplet</sub> = N [φ<sub>A</sub>(1)φ<sub>B</sub>(2) − φ<sub>B</sub>(1)φ<sub>A</sub>(2)] × χ<sub>triplet</sub><br>
+            where χ<sub>triplet</sub> ∈ {α(1)α(2), (α(1)β(2)+β(1)α(2))/√2, β(1)β(2)}`;
+            } else {
+                langToggle.textContent = "English";
+                document.getElementById("title").textContent = "自然窥探者 · Firebase + Supabase 上传测试";
+                document.getElementById("desc").textContent = "上传 PDF 或图片评论，全网可见";
+                document.getElementById("addComment").textContent = "提交评论";
+                document.getElementById("h2title").textContent = "⚛️ H₂ 分子波函数表达式";
+                document.getElementById("singlet").innerHTML = `<b>基态（单重态，Singlet）：</b><br>
+            ψ<sub>singlet</sub> = N [φ<sub>A</sub>(1)φ<sub>B</sub>(2) + φ<sub>B</sub>(1)φ<sub>A</sub>(2)] × (α(1)β(2) − β(1)α(2))`;
+                document.getElementById("triplet").innerHTML = `<b>三重态（Triplet）：</b><br>
+            ψ<sub>triplet</sub> = N [φ<sub>A</sub>(1)φ<sub>B</sub>(2) − φ<sub>B</sub>(1)φ<sub>A</sub>(2)] × χ<sub>triplet</sub><br>
+            其中 χ<sub>triplet</sub> ∈ {α(1)α(2), (α(1)β(2)+β(1)α(2))/√2, β(1)β(2)}`;
             }
-            const trace = {
-                x, y, z, mode: 'markers',
-                marker: {
-                    size: 2,
-                    color: psi,
-                    colorscale: model === 'HL' ? 'Blues' : 'Reds',
-                    opacity: 0.5
-                },
-                type: 'scatter3d'
-            };
-            const layout = {
-                title: model === 'HL' ? '海特勒–伦敦共价态电子云' : '分子轨道 σ 成键电子云',
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                font: { color: '#fff' },
-                scene: {
-                    xaxis: { title: 'x (a₀)' },
-                    yaxis: { title: 'y (a₀)' },
-                    zaxis: { title: 'z (a₀)' }
-                }
-            };
-            Plotly.newPlot('h2plot', [trace], layout);
         }
 
         particlesJS("particles-js", {
