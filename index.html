@@ -17,7 +17,7 @@
         }
 
         body {
-            font-family: Inter,"Microsoft YaHei",system-ui,Arial;
+            font-family: Inter, "Microsoft YaHei", system-ui, Arial;
             background: var(--bg);
             color: var(--text);
             margin: 0;
@@ -57,11 +57,13 @@
     <div class="card">
         <h2>Firebase + Supabase 上传示例</h2>
         <p class="small">上传 PDF/图片评论，全网可见</p>
+
         <input id="cName" type="text" placeholder="名字 (必填)" style="width:100%;margin-top:6px;"><br>
         <input id="cEmail" type="email" placeholder="邮箱 (可选)" style="width:100%;margin-top:6px;"><br>
         <textarea id="cText" placeholder="评论内容 (必填)" style="width:100%;min-height:80px;margin-top:6px;"></textarea><br>
         <input id="cFile" type="file" accept="application/pdf,image/png,image/jpeg" style="margin-top:6px;"><br>
         <button id="addComment" style="margin-top:8px;">提交评论</button>
+
         <div id="uploadStatus" class="small" style="margin-top:4px;"></div>
         <div id="commentsContainer" style="margin-top:12px;"></div>
     </div>
@@ -85,9 +87,9 @@
             measurementId: "G-YEW0X7YB17"
         };
 
-        // ✅ Supabase 配置
+        // ✅ Supabase 配置（用你提供的 URL + anon key）
         const supabaseUrl = "https://isnamqcyzimvlmaiczeu.supabase.co";
-        const supabaseKey = "你的 anon 公钥"; // ⚠️替换成你的 Supabase anon key
+        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzbmFtcWN5emltdmxtYWljemV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTQwODEsImV4cCI6MjA3ODAzMDA4MX0.WcwFDqu-22xMWanw3mWqrIN2M1llNBI-bDrO3QkmlMI";
         const supabase = createClient(supabaseUrl, supabaseKey);
 
         // 初始化 Firebase
@@ -137,7 +139,7 @@
 
                 // ✅ 上传文件到 Supabase Storage
                 const { data, error } = await supabase.storage
-                    .from('p') // 你的 bucket 名
+                    .from('p') // ⚠️ 你的 bucket 名，确保 Supabase Storage 中存在 “p”
                     .upload(filePath, file);
 
                 if (error) {
@@ -168,4 +170,3 @@
     </script>
 </body>
 </html>
-
