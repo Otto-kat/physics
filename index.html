@@ -86,12 +86,11 @@
             measurementId: "G-YEW0X7YB17"
         };
 
-        // ✅ Supabase 配置（你提供的 URL + anon key）
+        // ✅ Supabase 配置
         const supabaseUrl = "https://isnamqcyzimvlmaiczeu.supabase.co";
         const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzbmFtcWN5emltdmxtYWljemV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTQwODEsImV4cCI6MjA3ODAzMDA4MX0.WcwFDqu-22xMWanw3mWqrIN2M1llNBI-bDrO3QkmlMI";
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        // 初始化 Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
@@ -99,6 +98,50 @@
         const commentsContainer = document.getElementById('commentsContainer');
         const statusEl = document.getElementById('uploadStatus');
 
+        // 🗑️ 自动清理 10 天前文件
+        async function autoCleanOldFiles() {
+            try {
+                const { data, error } = await supabase.storage.from('p').list('uploads', { limit: 1000 });
+                if (error) throw error;
+                const now = Date.now();
+                const oldFiles = data.filter(f => f.created_at && (now - new Date(f.created_at).getTime()) > 10 * 24 * 60 * 60 * 1000);
+                for (const file of oldFiles) {
+                    await supabase.storage.from('p').remove([`uploads/${file.name}`]);
+                    console.log(`🧹 已删除旧文件：${file.name}`);
+                }
+            } catch (err) {
+                console.error('自动清理文件出错:', err);
+            }
+        }
+
+        // 💾 显示 Supabase 存储容量
+        async function showStorageUsage() {
+            const usageEl = document.createElement('div');
+            usageEl.className = 'small';
+            usageEl.style.marginTop = '10px';
+            document.querySelector('.card').appendChild(usageEl);
+
+            try {
+                const { data, error } = await supabase.from('storage.objects').select('metadata');
+                if (error) throw error;
+
+                const totalBytes = data.reduce((sum, obj) => sum + (Number(obj.metadata?.size || 0)), 0);
+                const usedMB = (totalBytes / (1024 * 1024)).toFixed(2);
+                const totalMB = 1024; // 免费层 1GB
+                const percent = ((usedMB / totalMB) * 100).toFixed(1);
+
+                usageEl.innerHTML = `
+                        💾 当前存储使用：<b>${usedMB} MB</b> / ${totalMB} MB (${percent}%)
+                        <div style="background:#eee;border-radius:6px;overflow:hidden;margin-top:4px;height:8px;">
+                            <div style="width:${percent}%;background:#2563eb;height:8px;"></div>
+                        </div>
+                    `;
+            } catch (err) {
+                console.error('获取存储容量失败:', err);
+            }
+        }
+
+        // 💬 渲染评论
         async function renderComments() {
             commentsContainer.innerHTML = "<div class='small'>加载中...</div>";
             const q = query(collection(db, "comments"), orderBy("ts", "desc"));
@@ -109,16 +152,17 @@
                 const el = document.createElement('div');
                 el.className = "comment";
                 el.innerHTML = `
-              <div><strong>${c.name || '访客'}</strong>
-              <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span></div>
-              <div>${c.text || ''}</div>
-              ${c.fileUrl ? `<a class="file-link" href="${c.fileUrl}" target="_blank">📎 ${c.fileName}</a>` : ''}
-            `;
+                        <div><strong>${c.name || '访客'}</strong>
+                        <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span></div>
+                        <div>${c.text || ''}</div>
+                        ${c.fileUrl ? `<a class="file-link" href="${c.fileUrl}" target="_blank">📎 ${c.fileName}</a>` : ''}
+                    `;
                 commentsContainer.appendChild(el);
             });
             if (!snap.size) commentsContainer.innerHTML = "<div class='small muted'>暂无评论</div>";
         }
 
+        // 📤 上传评论
         addBtn.addEventListener('click', async () => {
             const name = document.getElementById('cName').value.trim();
             const email = document.getElementById('cEmail').value.trim();
@@ -132,28 +176,18 @@
             const file = fileInput.files[0];
             if (file) {
                 fileName = file.name;
-
-                // ✅ 生成安全文件名：移除非 ASCII，避免 header 报错
                 const asciiName = file.name.normalize('NFKD').replace(/[^\x00-\x7F]/g, '');
                 const safeName = encodeURIComponent(asciiName.replace(/[^\w.\-]/g, '_') || Date.now().toString());
                 const filePath = `uploads/${Date.now()}_${safeName}`;
 
                 try {
-                    const { data, error } = await supabase.storage
-                        .from('p') // ⚠️ 请确保 bucket 名是 “p”
-                        .upload(filePath, file, {
-                            cacheControl: '3600',
-                            contentType: file.type,
-                            upsert: false
-                        });
-
+                    const { error } = await supabase.storage.from('p').upload(filePath, file, {
+                        cacheControl: '3600',
+                        contentType: file.type,
+                        upsert: false
+                    });
                     if (error) throw error;
-
-                    const { data: publicData, error: pubErr } = supabase.storage
-                        .from('p')
-                        .getPublicUrl(filePath);
-
-                    if (pubErr) throw pubErr;
+                    const { data: publicData } = supabase.storage.from('p').getPublicUrl(filePath);
                     fileUrl = publicData.publicUrl;
                 } catch (err) {
                     console.error("Supabase upload error:", err);
@@ -162,7 +196,6 @@
                 }
             }
 
-            // ✅ 保存评论到 Firestore
             try {
                 await addDoc(collection(db, "comments"), {
                     name, email, text, fileUrl, fileName, ts: serverTimestamp()
@@ -171,13 +204,17 @@
                 fileInput.value = "";
                 document.getElementById('cText').value = "";
                 renderComments();
+                showStorageUsage(); // 上传后刷新使用量
             } catch (e) {
                 console.error("Firestore save error:", e);
                 statusEl.textContent = "保存评论失败：" + (e.message || e);
             }
         });
 
+        // 页面加载时执行
         renderComments();
+        showStorageUsage();
+        autoCleanOldFiles();
     </script>
 </body>
 </html>
