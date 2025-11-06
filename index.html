@@ -3,9 +3,8 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Firebase 云端评论与文件上传示例</title>
+    <title>Firebase + Supabase 文件上传示例</title>
     <style>
-        /* 保留原样式 */
         :root {
             --bg: #f6f8fb;
             --card: #fff;
@@ -56,7 +55,7 @@
 </head>
 <body>
     <div class="card">
-        <h2>Firebase 云端轻简示例</h2>
+        <h2>Firebase + Supabase 上传示例</h2>
         <p class="small">上传 PDF/图片评论，全网可见</p>
         <input id="cName" type="text" placeholder="名字 (必填)" style="width:100%;margin-top:6px;"><br>
         <input id="cEmail" type="email" placeholder="邮箱 (可选)" style="width:100%;margin-top:6px;"><br>
@@ -73,11 +72,11 @@
         import {
             getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp
         } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-        import {
-            getStorage, ref, uploadBytesResumable, getDownloadURL
-        } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-storage.js";
 
-        // 🔥 你的 Firebase 配置
+        // ✅ Supabase SDK
+        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+        // 🔥 Firebase 配置
         const firebaseConfig = {
             apiKey: "AIzaSyCPDiyZtMUe_RNudnvXmaZGUfwhJjKVXOs",
             authDomain: "my-light-site.firebaseapp.com",
@@ -88,9 +87,13 @@
             measurementId: "G-YEW0X7YB17"
         };
 
+        // ✅ Supabase 配置（替换为你自己的）
+        const supabaseUrl = "https://isnamqcyzimvlmaiczeu.supabase.co";
+        const supabaseKey = "你的 anon 公钥";
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const storage = getStorage(app);
 
         const addBtn = document.getElementById('addComment');
         const commentsContainer = document.getElementById('commentsContainer');
@@ -106,10 +109,10 @@
                 const el = document.createElement('div');
                 el.className = "comment";
                 el.innerHTML = `
-              <div><strong>${c.name || '访客'}</strong> <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span></div>
-              <div>${c.text || ''}</div>
-              ${c.fileUrl ? `<a class="file-link" href="${c.fileUrl}" target="_blank">📎 ${c.fileName}</a>` : ''}
-            `;
+                        <div><strong>${c.name || '访客'}</strong> <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span></div>
+                        <div>${c.text || ''}</div>
+                        ${c.fileUrl ? `<a class="file-link" href="${c.fileUrl}" target="_blank">📎 ${c.fileName}</a>` : ''}
+                    `;
                 commentsContainer.appendChild(el);
             });
             if (!snap.size) commentsContainer.innerHTML = "<div class='small muted'>暂无评论</div>";
@@ -128,25 +131,27 @@
             const file = fileInput.files[0];
             if (file) {
                 fileName = file.name;
-                const fileRef = ref(storage, `uploads/${Date.now()}_${file.name}`);
-                // ✅ 改用带进度回调的 uploadBytesResumable
-                const uploadTask = uploadBytesResumable(fileRef, file);
+                const filePath = `uploads/${Date.now()}_${file.name}`;
 
-                await new Promise((resolve, reject) => {
-                    uploadTask.on('state_changed',
-                        (snapshot) => {
-                            const progress = (snapshot.bytesTransferred / snapshot.totalBytes * 100).toFixed(0);
-                            statusEl.textContent = `上传中... ${progress}%`;
-                        },
-                        (error) => reject(error),
-                        async () => {
-                            fileUrl = await getDownloadURL(uploadTask.snapshot.ref);
-                            resolve();
-                        }
-                    );
-                });
+                // ✅ 上传到 Supabase Storage 的 "p" bucket
+                const { data, error } = await supabase.storage
+                    .from('p') // 你的 bucket 名称
+                    .upload(filePath, file);
+
+                if (error) {
+                    statusEl.textContent = "上传失败：" + error.message;
+                    console.error(error);
+                    return;
+                }
+
+                // ✅ 获取可公开访问的 URL
+                const { data: publicData } = supabase.storage
+                    .from('p')
+                    .getPublicUrl(filePath);
+                fileUrl = publicData.publicUrl;
             }
 
+            // ✅ 评论依然存入 Firebase Firestore
             await addDoc(collection(db, "comments"), {
                 name, email, text, fileUrl, fileName, ts: serverTimestamp()
             });
