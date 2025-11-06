@@ -68,7 +68,6 @@
         <div id="commentsContainer" style="margin-top:12px;"></div>
     </div>
 
-    <!-- Firebase + Supabase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
         import {
@@ -87,7 +86,7 @@
             measurementId: "G-YEW0X7YB17"
         };
 
-        // ✅ Supabase 配置（用你提供的 URL + anon key）
+        // ✅ Supabase 配置（你提供的 URL + anon key）
         const supabaseUrl = "https://isnamqcyzimvlmaiczeu.supabase.co";
         const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzbmFtcWN5emltdmxtYWljemV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTQwODEsImV4cCI6MjA3ODAzMDA4MX0.WcwFDqu-22xMWanw3mWqrIN2M1llNBI-bDrO3QkmlMI";
         const supabase = createClient(supabaseUrl, supabaseKey);
@@ -132,38 +131,50 @@
 
             const file = fileInput.files[0];
             if (file) {
-                // ✅ 修复文件名：去除特殊字符 + URL 安全编码
-                const safeName = encodeURIComponent(file.name.replace(/[^\w.-]/g, '_'));
                 fileName = file.name;
+
+                // ✅ 生成安全文件名：移除非 ASCII，避免 header 报错
+                const asciiName = file.name.normalize('NFKD').replace(/[^\x00-\x7F]/g, '');
+                const safeName = encodeURIComponent(asciiName.replace(/[^\w.\-]/g, '_') || Date.now().toString());
                 const filePath = `uploads/${Date.now()}_${safeName}`;
 
-                // ✅ 上传文件到 Supabase Storage
-                const { data, error } = await supabase.storage
-                    .from('p') // ⚠️ 你的 bucket 名，确保 Supabase Storage 中存在 “p”
-                    .upload(filePath, file);
+                try {
+                    const { data, error } = await supabase.storage
+                        .from('p') // ⚠️ 请确保 bucket 名是 “p”
+                        .upload(filePath, file, {
+                            cacheControl: '3600',
+                            contentType: file.type,
+                            upsert: false
+                        });
 
-                if (error) {
-                    statusEl.textContent = "上传失败：" + error.message;
-                    console.error(error);
+                    if (error) throw error;
+
+                    const { data: publicData, error: pubErr } = supabase.storage
+                        .from('p')
+                        .getPublicUrl(filePath);
+
+                    if (pubErr) throw pubErr;
+                    fileUrl = publicData.publicUrl;
+                } catch (err) {
+                    console.error("Supabase upload error:", err);
+                    statusEl.textContent = "上传失败：" + (err.message || String(err));
                     return;
                 }
-
-                // ✅ 获取公开 URL
-                const { data: publicData } = supabase.storage
-                    .from('p')
-                    .getPublicUrl(filePath);
-                fileUrl = publicData.publicUrl;
             }
 
-            // ✅ 评论依然存入 Firebase Firestore
-            await addDoc(collection(db, "comments"), {
-                name, email, text, fileUrl, fileName, ts: serverTimestamp()
-            });
-
-            statusEl.textContent = "✅ 已上传并发布";
-            fileInput.value = "";
-            document.getElementById('cText').value = "";
-            renderComments();
+            // ✅ 保存评论到 Firestore
+            try {
+                await addDoc(collection(db, "comments"), {
+                    name, email, text, fileUrl, fileName, ts: serverTimestamp()
+                });
+                statusEl.textContent = "✅ 已上传并发布";
+                fileInput.value = "";
+                document.getElementById('cText').value = "";
+                renderComments();
+            } catch (e) {
+                console.error("Firestore save error:", e);
+                statusEl.textContent = "保存评论失败：" + (e.message || e);
+            }
         });
 
         renderComments();
