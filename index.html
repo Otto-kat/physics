@@ -45,6 +45,18 @@
             backdrop-filter: blur(10px);
         }
 
+        .about {
+            text-align: center;
+            font-size: 14px;
+            color: var(--muted);
+            margin-top: 16px;
+            line-height: 1.6;
+        }
+
+            .about b {
+                color: var(--accent);
+            }
+
         .comment {
             border-top: 1px solid rgba(255, 255, 255, 0.2);
             margin-top: 8px;
@@ -117,9 +129,17 @@
         <div id="storageUsage" class="small" style="margin-top:10px;"></div>
 
         <div id="commentsContainer" style="margin-top:12px;"></div>
+
+        <!-- 🌌 About Section -->
+        <div class="about">
+            <b>Otto Von Davinstar</b><br>
+            “If you want to find the secrets of the universe,<br>
+            think in terms of energy, frequency and vibration.”<br>
+            — N. Tesla
+        </div>
     </div>
 
-    <!-- 🧠 脚本 -->
+    <!-- 🧠 主脚本 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp }
@@ -183,9 +203,6 @@
 
         langToggle.addEventListener('click', switchLang);
 
-        // =========================
-        // 💾 Supabase 存储统计
-        // =========================
         async function showStorageUsage() {
             try {
                 let totalBytes = 0;
@@ -214,9 +231,6 @@
             }
         }
 
-        // =========================
-        // 💬 渲染评论
-        // =========================
         async function renderComments() {
             commentsContainer.innerHTML = "<div class='small'>加载中...</div>";
             const q = query(collection(db, "comments"), orderBy("ts", "desc"));
@@ -237,9 +251,6 @@
             if (!snap.size) commentsContainer.innerHTML = "<div class='small muted'>暂无评论 / No comments</div>";
         }
 
-        // =========================
-        // 📤 上传评论
-        // =========================
         addBtn.addEventListener('click', async () => {
             const name = document.getElementById('cName').value.trim();
             const email = document.getElementById('cEmail').value.trim();
