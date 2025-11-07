@@ -150,6 +150,12 @@
             white-space: pre-wrap;
             font-family: monospace;
         }
+
+        #__canvas__ {
+            background: #fff;
+            border-radius: 8px;
+            margin-top: 8px;
+        }
     </style>
 </head>
 <body>
@@ -190,7 +196,8 @@
 
                 <!-- ✅ 🐢 Turtle 绘图区 -->
                 <div id="turtleContainer" style="margin-top:10px;text-align:center;">
-                    <canvas id="__canvas__" width="480" height="360" style="background:#fff;border-radius:8px;display:none;"></canvas>
+                    <button id="toggleTurtle" style="margin-bottom:6px;">🐢 显示绘图区</button><br>
+                    <canvas id="__canvas__" width="480" height="360" style="display:none;"></canvas>
                 </div>
             </div>
         </div>
@@ -246,7 +253,7 @@
 
         textArea.addEventListener('input', async () => {
             previewDiv.innerHTML = marked.parse(textArea.value || "*Markdown 实时预览 / Live Preview*");
-            if (window.MathJax && MathJax.typesetPromise) { await MathJax.typesetPromise([previewDiv]); }
+            if (window.MathJax && MathJax.typesetPromise) await MathJax.typesetPromise([previewDiv]);
         });
 
         async function showStorageUsage(force = false) {
@@ -260,7 +267,7 @@
                 const remainMB = (totalMB - usedMB).toFixed(2);
                 const html = `💾 ${lang === 'zh' ? '当前使用' : 'Used'}：<b>${usedMB} MB</b> / ${totalMB} MB （${lang === 'zh' ? '剩余' : 'Remaining'} <b>${remainMB} MB</b>）`;
                 usageEl.innerHTML = html;
-            } catch (e) {
+            } catch {
                 usageEl.textContent = "⚠️ Storage info unavailable";
             }
         }
@@ -311,13 +318,21 @@
 
         renderComments(); showStorageUsage();
 
-        /* ✅ Python + Turtle */
+        /* ✅ Python + Turtle 改进 */
         const togglePython = document.getElementById('togglePython');
         const pythonArea = document.getElementById('pythonArea');
         const runPython = document.getElementById('runPython');
         const outputEl = document.getElementById('pythonOutput');
         const savePythonResult = document.getElementById('savePythonResult');
-        const turtleContainer = document.getElementById('turtleContainer');
+        const turtleBtn = document.getElementById('toggleTurtle');
+        const canvas = document.getElementById('__canvas__');
+
+        let turtleVisible = false;
+        turtleBtn.addEventListener('click', () => {
+            turtleVisible = !turtleVisible;
+            canvas.style.display = turtleVisible ? 'block' : 'none';
+            turtleBtn.textContent = turtleVisible ? '❌ 隐藏绘图区' : '🐢 显示绘图区';
+        });
 
         togglePython.addEventListener('click', () => {
             pythonArea.style.display = pythonArea.style.display === 'none' ? 'block' : 'none';
@@ -328,9 +343,17 @@
             const code = document.getElementById('pythonCode').value;
             outputEl.textContent = '';
 
-            // ✅ 重建 canvas，防止 null 错误
-            turtleContainer.innerHTML = '<canvas id="__canvas__" width="480" height="360" style="background:#fff;border-radius:8px;"></canvas>';
-            const canvas = document.getElementById('__canvas__');
+            // ✅ 清理并重建 canvas（防止 Skulpt turtle 绑定错误）
+            const container = document.getElementById('turtleContainer');
+            container.querySelectorAll('canvas').forEach(c => c.remove());
+            const newCanvas = document.createElement('canvas');
+            newCanvas.id = '__canvas__';
+            newCanvas.width = 480;
+            newCanvas.height = 360;
+            newCanvas.style.background = '#fff';
+            newCanvas.style.borderRadius = '8px';
+            newCanvas.style.display = turtleVisible ? 'block' : 'none';
+            container.appendChild(newCanvas);
 
             const outf = text => outputEl.textContent += text + '\n';
             Sk.configure({
@@ -339,6 +362,7 @@
                 __future__: Sk.python3,
                 turtle: { canvasID: "__canvas__", width: 480, height: 360 }
             });
+
             try {
                 await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true));
                 if (savePythonResult.checked) {
