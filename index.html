@@ -4,7 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>自然窥探者 · Firebase + Supabase 上传测试</title>
+
+    <!-- 样式 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+
     <style>
         :root {
             --bg1: #101522;
@@ -55,14 +59,9 @@
             line-height: 1.6;
         }
 
-            .about b {
-                color: var(--accent);
-            }
-
         h2 {
             font-weight: 700;
-            letter-spacing: 0.5px;
-            color: #ffffff;
+            color: #fff;
         }
 
         .comment {
@@ -137,18 +136,18 @@
 
         <input id="cName" type="text" placeholder="名字 (必填)" style="margin-top:6px;"><br>
         <input id="cEmail" type="email" placeholder="邮箱 (可选)" style="margin-top:6px;"><br>
-        <textarea id="cText" placeholder="评论内容 (支持 Markdown)" style="min-height:80px;margin-top:6px;"></textarea><br>
+        <textarea id="cText" placeholder="评论内容 (支持 Markdown + LaTeX)" style="min-height:80px;margin-top:6px;"></textarea><br>
         <input id="cFile" type="file" accept="application/pdf,image/png,image/jpeg" style="margin-top:6px;"><br>
 
-        <div id="markdownPreview" style="
-      background: rgba(255,255,255,0.06);
+        <div id="markdownPreview" style="background: rgba(255,255,255,0.06);
       border-radius: 8px;
       padding: 10px;
       margin-top: 8px;
       font-size: 14px;
       color: #f8fafc;
-      border: 1px solid rgba(255,255,255,0.1);
-    ">*Markdown 实时预览 / Live Preview*</div>
+      border: 1px solid rgba(255,255,255,0.1);">
+            *Markdown + LaTeX 实时预览 / Live Preview*
+        </div>
 
         <button id="addComment" style="margin-top:8px;">提交评论</button>
 
@@ -164,14 +163,19 @@
         </div>
     </div>
 
+    <!-- 依赖库 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp }
             from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
         import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
         import { marked } from "https://cdn.jsdelivr.net/npm/marked@12.0.2/lib/marked.esm.js";
+        import DOMPurify from "https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.es.min.js";
 
-        // Firebase 配置
+        // LaTeX 渲染
+        import "https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js";
+        import renderMathInElement from "https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.mjs";
+
         const firebaseConfig = {
             apiKey: "AIzaSyCPDiyZtMUe_RNudnvXmaZGUfwhJjKVXOs",
             authDomain: "my-light-site.firebaseapp.com",
@@ -181,75 +185,38 @@
             appId: "1:870998893975:web:ce4b1d412168e07b5390d2"
         };
 
-        // Supabase 配置
         const supabaseUrl = "https://isnamqcyzimvlmaiczeu.supabase.co";
         const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzbmFtcWN5emltdmxtYWljemV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTQwODEsImV4cCI6MjA3ODAzMDA4MX0.WcwFDqu-22xMWanw3mWqrIN2M1llNBI-bDrO3QkmlMI";
-        const supabase = createClient(supabaseUrl, supabaseKey);
+
         const db = getFirestore(initializeApp(firebaseConfig));
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
-        const addBtn = document.getElementById('addComment');
-        const commentsContainer = document.getElementById('commentsContainer');
-        const statusEl = document.getElementById('uploadStatus');
-        const usageEl = document.getElementById('storageUsage');
-        const langToggle = document.getElementById('langToggle');
-        const textArea = document.getElementById('cText');
-        const previewDiv = document.getElementById('markdownPreview');
+        const cText = document.getElementById("cText");
+        const preview = document.getElementById("markdownPreview");
+        const commentsContainer = document.getElementById("commentsContainer");
+        const usageEl = document.getElementById("storageUsage");
+        const statusEl = document.getElementById("uploadStatus");
 
-        // 实时 Markdown 预览
-        textArea.addEventListener('input', () => {
-            const raw = textArea.value;
-            previewDiv.innerHTML = marked.parse(raw || "*Markdown 实时预览 / Live Preview*");
+        // Markdown + LaTeX 实时预览
+        cText.addEventListener("input", () => {
+            const html = DOMPurify.sanitize(marked.parse(cText.value || "*Markdown + LaTeX 实时预览*"));
+            preview.innerHTML = html;
+            renderMathInElement(preview, { delimiters: [{ left: "$$", right: "$$", display: true }, { left: "$", right: "$", display: false }] });
         });
 
-        // 中英文切换
-        let lang = 'zh';
-        const texts = {
-            zh: { title: "自然窥探者 · Firebase + Supabase 上传测试", desc: "上传 PDF 或图片评论，全网可见", submit: "提交评论", name: "名字 (必填)", email: "邮箱 (可选)", comment: "评论内容 (支持 Markdown)", switch: "🌐 English" },
-            en: { title: "Natural Observer · Firebase + Supabase Upload Demo", desc: "Upload PDFs or images — visible to everyone worldwide.", submit: "Post Comment", name: "Name (required)", email: "Email (optional)", comment: "Comment (Markdown supported)", switch: "🌐 中文" }
-        };
-
-        langToggle.addEventListener('click', () => {
-            lang = lang === 'zh' ? 'en' : 'zh';
-            const t = texts[lang];
-            document.getElementById('title').textContent = t.title;
-            document.getElementById('desc').textContent = t.desc;
-            document.getElementById('addComment').textContent = t.submit;
-            document.getElementById('cName').placeholder = t.name;
-            document.getElementById('cEmail').placeholder = t.email;
-            document.getElementById('cText').placeholder = t.comment;
-            langToggle.textContent = t.switch;
-        });
-
-        // 显示 Supabase 容量使用
         async function showStorageUsage() {
             try {
+                const { data } = await supabase.storage.from('p').list('uploads', { limit: 1000 });
                 let totalBytes = 0;
-                const { data, error } = await supabase.storage.from('p').list('uploads', { limit: 1000 });
-                if (error) throw error;
-                for (const file of data) if (file.metadata?.size) totalBytes += Number(file.metadata.size);
-
-                const usedMB = (totalBytes / (1024 * 1024)).toFixed(2);
-                const totalMB = 1024;
-                const remainMB = (totalMB - usedMB).toFixed(2);
-                const percent = Math.min(((usedMB / totalMB) * 100).toFixed(1), 100);
-
-                let color = "#22c55e";
-                if (percent > 70) color = "#f59e0b";
-                if (percent > 90) color = "#ef4444";
-
-                usageEl.innerHTML = `
-              💾 ${lang === 'zh' ? '当前使用' : 'Used'}：<b>${usedMB} MB</b> / ${totalMB} MB
-              （${lang === 'zh' ? '剩余' : 'Remaining'} <b>${remainMB} MB</b>）
-              <div style="background:rgba(255,255,255,0.2);border-radius:6px;overflow:hidden;margin-top:4px;height:8px;">
-                <div style="width:${percent}%;background:${color};height:8px;"></div>
-              </div>
-            `;
+                for (const f of data || []) totalBytes += f.metadata?.size || 0;
+                const usedMB = (totalBytes / 1024 / 1024).toFixed(2);
+                const remainMB = (1024 - usedMB).toFixed(2);
+                usageEl.innerHTML = `💾 当前使用 <b>${usedMB} MB</b> / 1024 MB （剩余 <b>${remainMB} MB</b>）`;
             } catch {
-                usageEl.textContent = "⚠️ Storage info unavailable";
+                usageEl.textContent = "⚠️ 无法获取存储状态";
             }
         }
 
-        // 渲染评论
         async function renderComments() {
             commentsContainer.innerHTML = "<div class='small'>加载中...</div>";
             const q = query(collection(db, "comments"), orderBy("ts", "desc"));
@@ -257,50 +224,44 @@
             commentsContainer.innerHTML = "";
             snap.forEach(doc => {
                 const c = doc.data();
-                const el = document.createElement('div');
+                const el = document.createElement("div");
                 el.className = "comment";
                 el.innerHTML = `
-              <div><strong>${c.name || '访客 / Guest'}</strong>
-              <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span></div>
-              <div style="margin-top:4px;">${marked.parse(c.text || "")}</div>
-              ${c.fileUrl ? `<a class="file-link" href="${c.fileUrl}" target="_blank">📎 ${c.fileName}</a>` : ''}
+              <div><b>${c.name}</b> <span class="small">${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ""}</span></div>
+              <div>${DOMPurify.sanitize(marked.parse(c.text))}</div>
+              ${c.fileUrl ? `<a class='file-link' href='${c.fileUrl}' target='_blank'>📎 ${c.fileName}</a>` : ""}
             `;
                 commentsContainer.appendChild(el);
+                renderMathInElement(el);
             });
-            if (!snap.size) commentsContainer.innerHTML = "<div class='small muted'>暂无评论 / No comments</div>";
         }
 
-        // 上传 + 提交评论
-        addBtn.addEventListener('click', async () => {
-            const name = document.getElementById('cName').value.trim();
-            const email = document.getElementById('cEmail').value.trim();
-            const text = document.getElementById('cText').value.trim();
-            const fileInput = document.getElementById('cFile');
-            if (!name || !text) return alert(lang === 'zh' ? "请填写名字和评论内容" : "Please fill in name and comment");
+        document.getElementById("addComment").addEventListener("click", async () => {
+            const name = document.getElementById("cName").value.trim();
+            const text = cText.value.trim();
+            const file = document.getElementById("cFile").files[0];
+            if (!name || !text) return alert("请填写名字和评论内容");
 
-            statusEl.textContent = lang === 'zh' ? "正在上传..." : "Uploading...";
+            statusEl.textContent = "上传中...";
             let fileUrl = "", fileName = "";
 
-            const file = fileInput.files[0];
             if (file) {
                 fileName = file.name;
-                const safeName = encodeURIComponent(file.name.replace(/[^\w.\-]/g, '_'));
-                const filePath = `uploads/${Date.now()}_${safeName}`;
-                const { error } = await supabase.storage.from('p').upload(filePath, file);
-                if (!error) fileUrl = supabase.storage.from('p').getPublicUrl(filePath).data.publicUrl;
+                const path = `uploads/${Date.now()}_${encodeURIComponent(file.name)}`;
+                const { error } = await supabase.storage.from("p").upload(path, file);
+                if (!error) fileUrl = supabase.storage.from("p").getPublicUrl(path).data.publicUrl;
             }
 
-            await addDoc(collection(db, "comments"), { name, email, text, fileUrl, fileName, ts: serverTimestamp() });
-            statusEl.textContent = lang === 'zh' ? "✅ 已上传并发布" : "✅ Uploaded successfully";
-            renderComments();
+            await addDoc(collection(db, "comments"), { name, text, fileUrl, fileName, ts: serverTimestamp() });
+            statusEl.textContent = "✅ 已上传";
+            document.getElementById("cText").value = "";
+            preview.innerHTML = "*Markdown + LaTeX 实时预览*";
             showStorageUsage();
-            fileInput.value = "";
-            document.getElementById('cText').value = "";
-            previewDiv.innerHTML = "*Markdown 实时预览 / Live Preview*";
+            renderComments();
         });
 
-        renderComments();
         showStorageUsage();
+        renderComments();
     </script>
 
     <script>
