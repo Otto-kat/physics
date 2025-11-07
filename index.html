@@ -3,79 +3,175 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>自然窥探者 · Firebase + Supabase 上传调试版</title>
+    <title>自然窥探者 · Firebase + Supabase 上传测试</title>
     <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
     <style>
+        :root {
+            --bg1: #101522;
+            --bg2: #1e293b;
+            --card: rgba(255, 255, 255, 0.08);
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-contrast: #fff;
+            --radius: 12px;
+            --shadow: 0 6px 20px rgba(15, 23, 40, 0.3);
+        }
+
         body {
-            font-family: "Microsoft YaHei",system-ui;
-            background: linear-gradient(160deg,#101522,#1e293b);
-            color: #f1f5f9;
+            font-family: Inter, "Microsoft YaHei", system-ui, Arial;
+            background: linear-gradient(160deg, var(--bg1), var(--bg2));
+            color: var(--text);
             margin: 0;
-            padding: 0
+            padding: 0;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        #particles-js {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
         }
 
         .card {
-            max-width: 700px;
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 16px;
+            max-width: 680px;
             margin: 40px auto;
-            background: rgba(255,255,255,0.08);
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(15,23,40,0.3);
-            padding: 20px;
             backdrop-filter: blur(10px);
         }
 
-        input, textarea {
-            width: 100%;
-            margin-top: 6px;
-            border-radius: 6px;
-            border: 1px solid rgba(255,255,255,0.2);
-            background: rgba(255,255,255,0.1);
-            color: #fff;
-            padding: 8px;
+        .about {
+            text-align: center;
+            font-size: 14px;
+            color: var(--muted);
+            margin-top: 20px;
+            line-height: 1.6;
         }
 
-        button {
-            background: #3b82f6;
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            padding: 8px 16px;
-            margin-top: 8px;
-            cursor: pointer;
-            font-weight: 600
+            .about b {
+                color: var(--accent);
+            }
+
+        h2 {
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #ffffff;
         }
 
         .comment {
-            border-top: 1px solid rgba(255,255,255,0.15);
-            margin-top: 10px;
-            padding-top: 10px
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            margin-top: 8px;
+            padding-top: 8px;
         }
 
         .file-link {
-            color: #60a5fa;
+            display: inline-block;
+            color: var(--accent);
+            text-decoration: underline;
             font-size: 13px;
-            text-decoration: underline
+            margin-top: 4px;
         }
+
+        .small {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        button {
+            background: var(--accent);
+            color: var(--accent-contrast);
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+            button:hover {
+                background: #2563eb;
+                transform: scale(1.03);
+            }
+
+        .lang-switch {
+            float: right;
+            font-size: 13px;
+            color: var(--muted);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        input, textarea {
+            background: rgba(255,255,255,0.1);
+            color: var(--text);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            padding: 6px;
+            width: 100%;
+        }
+
+            input:focus, textarea:focus {
+                outline: none;
+                border-color: var(--accent);
+                background: rgba(255,255,255,0.15);
+            }
     </style>
 </head>
 <body>
     <div id="particles-js"></div>
+
     <div class="card">
-        <h2>自然窥探者 · 上传调试版</h2>
-        <input id="cName" placeholder="名字 (必填)">
-        <textarea id="cText" placeholder="评论内容 (必填)"></textarea>
-        <input id="cFile" type="file" accept="application/pdf,image/png,image/jpeg">
-        <button id="addComment">提交评论</button>
-        <div id="uploadStatus"></div>
+        <div>
+            <h2 id="title">自然窥探者 · Firebase + Supabase 上传测试</h2>
+            <span class="lang-switch" id="langToggle">🌐 English</span>
+        </div>
+
+        <p class="small" id="desc">上传 PDF 或图片评论，全网可见</p>
+
+        <input id="cName" type="text" placeholder="名字 (必填)" style="margin-top:6px;"><br>
+        <input id="cEmail" type="email" placeholder="邮箱 (可选)" style="margin-top:6px;"><br>
+        <textarea id="cText" placeholder="评论内容 (支持 Markdown)" style="min-height:80px;margin-top:6px;"></textarea><br>
+        <input id="cFile" type="file" accept="application/pdf,image/png,image/jpeg" style="margin-top:6px;"><br>
+
+        <div id="markdownPreview" style="
+      background: rgba(255,255,255,0.06);
+      border-radius: 8px;
+      padding: 10px;
+      margin-top: 8px;
+      font-size: 14px;
+      color: #f8fafc;
+      border: 1px solid rgba(255,255,255,0.1);
+    ">*Markdown 实时预览 / Live Preview*</div>
+
+        <button id="addComment" style="margin-top:8px;">提交评论</button>
+
+        <div id="uploadStatus" class="small" style="margin-top:4px;"></div>
+        <div id="storageUsage" class="small" style="margin-top:10px;"></div>
         <div id="commentsContainer" style="margin-top:12px;"></div>
+
+        <div class="about">
+            <b>Otto Von Davinstar</b><br>
+            “If you want to find the secrets of the universe,<br>
+            think in terms of energy, frequency and vibration.”<br>
+            — N. Tesla
+        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, orderBy, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp }
+            from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
         import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+        import { marked } from "https://cdn.jsdelivr.net/npm/marked@12.0.2/lib/marked.esm.js";
 
+        // Firebase 配置
         const firebaseConfig = {
             apiKey: "AIzaSyCPDiyZtMUe_RNudnvXmaZGUfwhJjKVXOs",
             authDomain: "my-light-site.firebaseapp.com",
@@ -84,72 +180,145 @@
             messagingSenderId: "870998893975",
             appId: "1:870998893975:web:ce4b1d412168e07b5390d2"
         };
-        const db = getFirestore(initializeApp(firebaseConfig));
 
+        // Supabase 配置
         const supabaseUrl = "https://isnamqcyzimvlmaiczeu.supabase.co";
         const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzbmFtcWN5emltdmxtYWljemV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTQwODEsImV4cCI6MjA3ODAzMDA4MX0.WcwFDqu-22xMWanw3mWqrIN2M1llNBI-bDrO3QkmlMI";
         const supabase = createClient(supabaseUrl, supabaseKey);
+        const db = getFirestore(initializeApp(firebaseConfig));
 
-        const btn = document.getElementById("addComment");
-        const statusEl = document.getElementById("uploadStatus");
-        const commentsContainer = document.getElementById("commentsContainer");
+        const addBtn = document.getElementById('addComment');
+        const commentsContainer = document.getElementById('commentsContainer');
+        const statusEl = document.getElementById('uploadStatus');
+        const usageEl = document.getElementById('storageUsage');
+        const langToggle = document.getElementById('langToggle');
+        const textArea = document.getElementById('cText');
+        const previewDiv = document.getElementById('markdownPreview');
 
-        async function renderComments() {
-            commentsContainer.innerHTML = "⏳ 加载评论中...";
+        // 实时 Markdown 预览
+        textArea.addEventListener('input', () => {
+            const raw = textArea.value;
+            previewDiv.innerHTML = marked.parse(raw || "*Markdown 实时预览 / Live Preview*");
+        });
+
+        // 中英文切换
+        let lang = 'zh';
+        const texts = {
+            zh: { title: "自然窥探者 · Firebase + Supabase 上传测试", desc: "上传 PDF 或图片评论，全网可见", submit: "提交评论", name: "名字 (必填)", email: "邮箱 (可选)", comment: "评论内容 (支持 Markdown)", switch: "🌐 English" },
+            en: { title: "Natural Observer · Firebase + Supabase Upload Demo", desc: "Upload PDFs or images — visible to everyone worldwide.", submit: "Post Comment", name: "Name (required)", email: "Email (optional)", comment: "Comment (Markdown supported)", switch: "🌐 中文" }
+        };
+
+        langToggle.addEventListener('click', () => {
+            lang = lang === 'zh' ? 'en' : 'zh';
+            const t = texts[lang];
+            document.getElementById('title').textContent = t.title;
+            document.getElementById('desc').textContent = t.desc;
+            document.getElementById('addComment').textContent = t.submit;
+            document.getElementById('cName').placeholder = t.name;
+            document.getElementById('cEmail').placeholder = t.email;
+            document.getElementById('cText').placeholder = t.comment;
+            langToggle.textContent = t.switch;
+        });
+
+        // 显示 Supabase 容量使用
+        async function showStorageUsage() {
             try {
-                const snap = await getDocs(query(collection(db, "comments"), orderBy("ts", "desc")));
-                commentsContainer.innerHTML = "";
-                snap.forEach(doc => {
-                    const d = doc.data();
-                    const div = document.createElement("div");
-                    div.className = "comment";
-                    div.innerHTML = `<b>${d.name}</b>：${d.text}<br>${d.fileUrl ? `<a class='file-link' href='${d.fileUrl}' target='_blank'>${d.fileName}</a>` : ""}`;
-                    commentsContainer.appendChild(div);
-                });
-            } catch (e) {
-                commentsContainer.innerHTML = "❌ 无法加载评论：" + e;
+                let totalBytes = 0;
+                const { data, error } = await supabase.storage.from('p').list('uploads', { limit: 1000 });
+                if (error) throw error;
+                for (const file of data) if (file.metadata?.size) totalBytes += Number(file.metadata.size);
+
+                const usedMB = (totalBytes / (1024 * 1024)).toFixed(2);
+                const totalMB = 1024;
+                const remainMB = (totalMB - usedMB).toFixed(2);
+                const percent = Math.min(((usedMB / totalMB) * 100).toFixed(1), 100);
+
+                let color = "#22c55e";
+                if (percent > 70) color = "#f59e0b";
+                if (percent > 90) color = "#ef4444";
+
+                usageEl.innerHTML = `
+              💾 ${lang === 'zh' ? '当前使用' : 'Used'}：<b>${usedMB} MB</b> / ${totalMB} MB
+              （${lang === 'zh' ? '剩余' : 'Remaining'} <b>${remainMB} MB</b>）
+              <div style="background:rgba(255,255,255,0.2);border-radius:6px;overflow:hidden;margin-top:4px;height:8px;">
+                <div style="width:${percent}%;background:${color};height:8px;"></div>
+              </div>
+            `;
+            } catch {
+                usageEl.textContent = "⚠️ Storage info unavailable";
             }
         }
 
-        btn.addEventListener("click", async () => {
-            const name = document.getElementById("cName").value.trim();
-            const text = document.getElementById("cText").value.trim();
-            const file = document.getElementById("cFile").files[0];
-            if (!name || !text) return alert("请填写名字和评论");
+        // 渲染评论
+        async function renderComments() {
+            commentsContainer.innerHTML = "<div class='small'>加载中...</div>";
+            const q = query(collection(db, "comments"), orderBy("ts", "desc"));
+            const snap = await getDocs(q);
+            commentsContainer.innerHTML = "";
+            snap.forEach(doc => {
+                const c = doc.data();
+                const el = document.createElement('div');
+                el.className = "comment";
+                el.innerHTML = `
+              <div><strong>${c.name || '访客 / Guest'}</strong>
+              <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span></div>
+              <div style="margin-top:4px;">${marked.parse(c.text || "")}</div>
+              ${c.fileUrl ? `<a class="file-link" href="${c.fileUrl}" target="_blank">📎 ${c.fileName}</a>` : ''}
+            `;
+                commentsContainer.appendChild(el);
+            });
+            if (!snap.size) commentsContainer.innerHTML = "<div class='small muted'>暂无评论 / No comments</div>";
+        }
 
-            statusEl.textContent = "⏳ 正在上传...";
-            console.log("开始上传:", { name, text, file });
+        // 上传 + 提交评论
+        addBtn.addEventListener('click', async () => {
+            const name = document.getElementById('cName').value.trim();
+            const email = document.getElementById('cEmail').value.trim();
+            const text = document.getElementById('cText').value.trim();
+            const fileInput = document.getElementById('cFile');
+            if (!name || !text) return alert(lang === 'zh' ? "请填写名字和评论内容" : "Please fill in name and comment");
 
+            statusEl.textContent = lang === 'zh' ? "正在上传..." : "Uploading...";
             let fileUrl = "", fileName = "";
-            try {
-                if (file) {
-                    fileName = file.name;
-                    const path = `uploads/${Date.now()}_${encodeURIComponent(file.name)}`;
-                    console.log("上传路径:", path);
-                    const { error: uploadErr } = await supabase.storage.from("p").upload(path, file);
-                    if (uploadErr) throw uploadErr;
-                    const { data: publicData } = supabase.storage.from("p").getPublicUrl(path);
-                    fileUrl = publicData.publicUrl;
-                    console.log("文件上传成功:", fileUrl);
-                }
 
-                await addDoc(collection(db, "comments"), { name, text, fileUrl, fileName, ts: serverTimestamp() });
-                statusEl.textContent = "✅ 上传成功！";
-                console.log("评论写入成功");
-                await renderComments();
-            } catch (err) {
-                console.error("上传出错:", err);
-                statusEl.textContent = "❌ 上传失败：" + err.message;
+            const file = fileInput.files[0];
+            if (file) {
+                fileName = file.name;
+                const safeName = encodeURIComponent(file.name.replace(/[^\w.\-]/g, '_'));
+                const filePath = `uploads/${Date.now()}_${safeName}`;
+                const { error } = await supabase.storage.from('p').upload(filePath, file);
+                if (!error) fileUrl = supabase.storage.from('p').getPublicUrl(filePath).data.publicUrl;
             }
+
+            await addDoc(collection(db, "comments"), { name, email, text, fileUrl, fileName, ts: serverTimestamp() });
+            statusEl.textContent = lang === 'zh' ? "✅ 已上传并发布" : "✅ Uploaded successfully";
+            renderComments();
+            showStorageUsage();
+            fileInput.value = "";
+            document.getElementById('cText').value = "";
+            previewDiv.innerHTML = "*Markdown 实时预览 / Live Preview*";
         });
 
         renderComments();
+        showStorageUsage();
     </script>
 
     <script>
         particlesJS("particles-js", {
-            particles: { number: { value: 80 }, color: { value: "#60a5fa" }, line_linked: { enable: true, color: "#60a5fa" }, move: { enable: true, speed: 1 } },
-            interactivity: { events: { onhover: { enable: true, mode: "repulse" } } }
+            particles: {
+                number: { value: 90, density: { enable: true, value_area: 800 } },
+                color: { value: "#60a5fa" },
+                shape: { type: "circle" },
+                opacity: { value: 0.5 },
+                size: { value: 2 },
+                line_linked: { enable: true, distance: 120, color: "#60a5fa", opacity: 0.3, width: 1 },
+                move: { enable: true, speed: 1.3, out_mode: "bounce" }
+            },
+            interactivity: {
+                events: { onhover: { enable: true, mode: "repulse" } },
+                modes: { repulse: { distance: 100 } }
+            },
+            retina_detect: true
         });
     </script>
 </body>
