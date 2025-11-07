@@ -4,7 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>自然窥探者 · Firebase + Supabase 上传测试</title>
+
+    <!-- 背景粒子 -->
     <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+
+    <!-- 数学公式 -->
     <script>
         window.MathJax = {
             tex: { inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
@@ -12,8 +16,11 @@
         };
     </script>
     <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <!-- Python Skulpt -->
     <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
+
     <style>
         :root {
             --bg1: #101522;
@@ -147,6 +154,7 @@
 </head>
 <body>
     <div id="particles-js"></div>
+
     <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;">
             <div>
@@ -184,6 +192,7 @@
         <div class="small" id="storageUsage" style="margin-top:16px;">💾 加载中...</div>
     </div>
 
+    <!-- ✅ 全部逻辑代码（Firebase + Supabase + Python + 多语言） -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp }
@@ -237,7 +246,7 @@
                 const cacheKey = 'storageUsageCache';
                 if (!force) {
                     const cached = localStorage.getItem(cacheKey);
-                    if (cached) { usageEl.innerHTML = cached; }
+                    if (cached) usageEl.innerHTML = cached;
                 }
                 const { data, error } = await supabase.storage.from('p').list('', { limit: 1000 });
                 if (error) throw error;
@@ -260,11 +269,11 @@
                     const c = doc.data(); const el = document.createElement('div');
                     el.className = "comment";
                     el.innerHTML = `<div style='display:flex;justify-content:space-between;'>
-            <b>${c.name || '访客'}</b>
-            <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span>
-          </div>
-          <div>${marked.parse(c.text || "")}</div>
-          ${c.fileUrl ? `<a class='file-link' href='${c.fileUrl}' target='_blank'>📎 ${c.fileName}</a>` : ''}`;
+                <b>${c.name || '访客'}</b>
+                <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span>
+              </div>
+              <div>${marked.parse(c.text || "")}</div>
+              ${c.fileUrl ? `<a class='file-link' href='${c.fileUrl}' target='_blank'>📎 ${c.fileName}</a>` : ''}`;
                     commentsContainer.appendChild(el);
                     if (window.MathJax && MathJax.typesetPromise) { MathJax.typesetPromise([el]); }
                 });
@@ -321,12 +330,15 @@
         particlesJS("particles-js", {
             particles: {
                 number: { value: 80 }, color: { value: "#60a5fa" }, shape: { type: "circle" },
-                opacity: { value: 0.45 }, size: { value: 2 }, line_linked: { enable: true, distance: 120, color: "#60a5fa", opacity: 0.2, width: 1 },
+                opacity: { value: 0.45 }, size: { value: 2 },
+                line_linked: { enable: true, distance: 120, color: "#60a5fa", opacity: 0.2, width: 1 },
                 move: { enable: true, speed: 1.2, out_mode: "bounce" }
-            }, interactivity: {
+            },
+            interactivity: {
                 events: { onhover: { enable: true, mode: "repulse" } },
                 modes: { repulse: { distance: 80 } }
-            }, retina_detect: true
+            },
+            retina_detect: true
         });
     </script>
 </body>
