@@ -1,49 +1,48 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>自然窥探者 · Firebase + Supabase 上传测试</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>自然窥探者 · Firebase + Supabase + LaTeX + Python</title>
 
     <!-- 粒子背景 -->
     <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
 
-    <!-- MathJax 配置（支持 $...$ 与 $$...$$） -->
+    <!-- CodeMirror（LaTeX & Python 编辑器） -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/stex/stex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/python/python.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/dracula.min.css">
+
+    <!-- Pyodide（运行 Python） -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+
+    <!-- MathJax -->
     <script>
         window.MathJax = {
-            tex: {
-                inlineMath: [['\\(', '\\)'], ['$', '$']],
-                displayMath: [['$$', '$$'], ['\\[', '\\]']]
-            },
-            options: {
-                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
-            }
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$']] },
+            options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
         };
     </script>
-    <script id="MathJax-script" async
-            src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
-    </script>
-
-    <!-- Skulpt 用于浏览器运行 Python -->
-    <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 
     <style>
         :root {
             --bg1: #101522;
             --bg2: #1e293b;
-            --card: rgba(255, 255, 255, 0.08);
+            --card: rgba(255,255,255,0.08);
             --text: #f1f5f9;
             --muted: #94a3b8;
             --accent: #3b82f6;
             --accent-contrast: #fff;
             --radius: 12px;
-            --shadow: 0 6px 20px rgba(15, 23, 40, 0.3);
+            --shadow: 0 6px 20px rgba(15,23,40,0.3);
         }
 
         body {
-            font-family: Inter, "Microsoft YaHei", system-ui, Arial;
-            background: linear-gradient(160deg, var(--bg1), var(--bg2));
+            font-family: Inter,"Microsoft YaHei",system-ui,Arial;
+            background: linear-gradient(160deg,var(--bg1),var(--bg2));
             color: var(--text);
             margin: 0;
             padding: 0;
@@ -64,9 +63,9 @@
             background: var(--card);
             border-radius: var(--radius);
             box-shadow: var(--shadow);
-            padding: 18px;
-            max-width: 900px;
-            margin: 36px auto;
+            padding: 16px;
+            max-width: 760px;
+            margin: 40px auto;
             backdrop-filter: blur(10px);
         }
 
@@ -78,26 +77,13 @@
             line-height: 1.6;
         }
 
+            .about b {
+                color: var(--accent);
+            }
+
         h2 {
             font-weight: 700;
-            letter-spacing: 0.5px;
-            color: #ffffff;
-            margin: 0 0 6px 0;
-        }
-
-        .row {
-            display: flex;
-            gap: 16px;
-            align-items: flex-start;
-        }
-
-        .col {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .section {
-            margin-top: 12px;
+            color: #fff;
         }
 
         .comment {
@@ -107,11 +93,9 @@
         }
 
         .file-link {
-            display: inline-block;
             color: var(--accent);
             text-decoration: underline;
             font-size: 13px;
-            margin-top: 4px;
         }
 
         .small {
@@ -121,180 +105,83 @@
 
         button {
             background: var(--accent);
-            color: var(--accent-contrast);
+            color: #fff;
             border: none;
             border-radius: 8px;
-            padding: 8px 12px;
+            padding: 8px 16px;
             cursor: pointer;
             font-weight: 600;
-            transition: 0.16s;
+            transition: 0.2s;
         }
 
             button:hover {
-                transform: translateY(-1px);
+                background: #2563eb;
+                transform: scale(1.03);
             }
+
+        .CodeMirror {
+            border-radius: 6px;
+            background: rgba(255,255,255,0.08);
+            height: 200px;
+        }
+
+        #pyOutput {
+            background: rgba(0,0,0,0.3);
+            padding: 6px;
+            border-radius: 6px;
+            margin-top: 6px;
+            min-height: 40px;
+            white-space: pre-wrap;
+        }
 
         .lang-switch {
             float: right;
             font-size: 13px;
             color: var(--muted);
             cursor: pointer;
-            user-select: none;
-        }
-
-        input, textarea {
-            background: rgba(255,255,255,0.06);
-            color: var(--text);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 6px;
-            padding: 8px;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        textarea {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Courier New", monospace;
-        }
-
-            input:focus, textarea:focus {
-                outline: none;
-                border-color: var(--accent);
-                background: rgba(255,255,255,0.08);
-            }
-
-        /* Markdown preview 内的公式适当换行显示 */
-        #markdownPreview {
-            white-space: pre-wrap;
-            word-break: break-word;
-            background: rgba(255,255,255,0.02);
-            border-radius: 6px;
-            padding: 10px;
-            border: 1px solid rgba(255,255,255,0.03);
-        }
-
-        .editor-box {
-            border-radius: 6px;
-            background: rgba(255,255,255,0.02);
-            padding: 8px;
-            border: 1px solid rgba(255,255,255,0.03);
-        }
-
-        .label {
-            font-size: 13px;
-            color: var(--muted);
-            margin-bottom: 6px;
-            display: block;
-        }
-
-        .py-output {
-            background: #0b1220;
-            color: #dff9ff;
-            padding: 8px;
-            border-radius: 6px;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Courier New", monospace;
-            font-size: 13px;
-            min-height: 36px;
-            white-space: pre-wrap;
-        }
-
-        /* responsive */
-        @media (max-width: 880px) {
-            .row {
-                flex-direction: column;
-            }
         }
     </style>
 </head>
 <body>
     <div id="particles-js"></div>
-
     <div class="card">
-        <div class="row" style="align-items:center;">
-            <div class="col" style="min-width:0">
-                <h2 id="title">自然窥探者 · Firebase + Supabase 上传测试</h2>
-                <div class="small" id="desc">上传 PDF 或图片评论，全网可见</div>
-            </div>
-            <div style="width:120px;text-align:right;">
-                <span class="lang-switch" id="langToggle">🌐 English</span>
-            </div>
-        </div>
+        <div><h2 id="title">自然窥探者 · Firebase + Supabase + LaTeX + Python</h2><span class="lang-switch" id="langToggle">🌐 English</span></div>
+        <p class="small" id="desc">上传 PDF 或图片评论，全网可见 + 内置 LaTeX & Python 编辑器</p>
 
-        <div class="section row">
-            <div class="col" style="flex: 1.2;">
-                <label class="label" for="cName">名字 (必填)</label>
-                <input id="cName" type="text" placeholder="名字 (必填)">
-                <label class="label" for="cEmail" style="margin-top:8px;">邮箱 (可选)</label>
-                <input id="cEmail" type="email" placeholder="邮箱 (可选)">
+        <input id="cName" type="text" placeholder="名字 (必填)" style="margin-top:6px;width:100%;"><br>
+        <input id="cEmail" type="email" placeholder="邮箱 (可选)" style="margin-top:6px;width:100%;"><br>
 
-                <label class="label" style="margin-top:8px;">评论（Markdown + LaTeX）</label>
-                <textarea id="cText" placeholder="在这里输入 Markdown（可以包含 LaTeX，例如 $\\alpha$ 或 $$E=mc^2$$）" style="min-height:140px;"></textarea>
+        <textarea id="cText" placeholder="评论内容 (支持 Markdown & LaTeX)" style="width:100%;height:100px;margin-top:6px;"></textarea><br>
+        <input id="cFile" type="file" accept="application/pdf,image/png,image/jpeg" style="margin-top:6px;"><br>
 
-                <label class="label" style="margin-top:8px;">上传文件（PDF / PNG / JPG）</label>
-                <input id="cFile" type="file" accept="application/pdf,image/png,image/jpeg">
+        <h3 style="margin-top:10px;">🧮 LaTeX 编辑区</h3>
+        <textarea id="latexEditor">$$E=mc^2$$</textarea>
+        <div id="latexPreview" style="padding:8px;"></div>
 
-                <div style="margin-top:10px;">
-                    <button id="addComment">提交评论</button>
-                    <span style="margin-left:12px;color:var(--muted);" id="uploadStatus"></span>
-                </div>
+        <h3 style="margin-top:10px;">🐍 Python 编辑区</h3>
+        <textarea id="pyEditor">print("Hello, Quantum World!")</textarea>
+        <button id="runPython" style="margin-top:6px;">▶ 运行 Python</button>
+        <div id="pyOutput"></div>
 
-                <div class="section">
-                    <div class="label">Markdown 实时预览</div>
-                    <div id="markdownPreview">*Markdown 实时预览 / Live Preview*</div>
-                </div>
+        <button id="addComment" style="margin-top:8px;">提交评论</button>
+        <div id="uploadStatus" class="small" style="margin-top:4px;"></div>
+        <div id="storageUsage" class="small" style="margin-top:10px;"></div>
+        <div id="commentsContainer" style="margin-top:12px;"></div>
 
-                <div class="section" id="commentsSection">
-                    <h3 style="margin:12px 0 6px 0;">已有评论</h3>
-                    <div id="commentsContainer"></div>
-                </div>
-
-                <div class="about">
-                    <b>Otto Von Davinstar</b><br>
-                    “If you want to find the secrets of the universe, think in terms of energy, frequency and vibration.” — N. Tesla
-                </div>
-            </div>
-
-            <!-- 右侧：LaTeX 编辑 & Python 编辑区 -->
-            <div class="col" style="max-width:360px;">
-                <div class="section editor-box">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <strong>LaTeX 编辑</strong>
-                        <small class="small" style="color:var(--muted)">单独渲染公式 / 段落</small>
-                    </div>
-                    <textarea id="latexInput" placeholder="在此输入 LaTeX 段落（如： $$\int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}$$）" style="min-height:90px;margin-top:8px;"></textarea>
-                    <div style="margin-top:8px;display:flex;gap:8px;">
-                        <button id="renderLatexBtn">渲染 LaTeX</button>
-                        <button id="clearLatexBtn" style="background:#475569">清空</button>
-                    </div>
-                    <div id="latexPreview" style="margin-top:10px;background:rgba(255,255,255,0.02);padding:8px;border-radius:6px;min-height:40px;"></div>
-                </div>
-
-                <div class="section editor-box" style="margin-top:14px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <strong>Python 编辑与运行（Skulpt）</strong>
-                        <small class="small" style="color:var(--muted)">浏览器内执行</small>
-                    </div>
-                    <textarea id="pyEditor" placeholder="# 在此输入 Python 代码，按 Run Python 运行" style="min-height:140px;margin-top:8px;">print('Hello from Python')\nfor i in range(3):\n    print(i)\n</textarea>
-                    <div style="margin-top:8px;display:flex;gap:8px;">
-                        <button id="runPyBtn">Run Python</button>
-                        <button id="clearPyBtn" style="background:#475569">Clear Output</button>
-                    </div>
-                    <div id="pyOutput" class="py-output" style="margin-top:8px;">Python 输出将显示在这里（Skulpt）。</div>
-                </div>
-
-                <div class="section small" style="margin-top:14px;" id="storageUsage">存储信息加载中...</div>
-            </div>
+        <div class="about">
+            <b>Otto Von Davinstar</b><br>
+            “If you want to find the secrets of the universe,<br>
+            think in terms of energy, frequency and vibration.”<br>— N. Tesla
         </div>
     </div>
 
-    <!-- 业务主脚本：使用模块化导入 Firestore / Supabase / marked -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp }
-            from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
         import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
         import { marked } from "https://cdn.jsdelivr.net/npm/marked@12.0.2/lib/marked.esm.js";
 
-        // ========== 配置区域：按需替换你的 Firebase / Supabase 值 ==========
+        // Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCPDiyZtMUe_RNudnvXmaZGUfwhJjKVXOs",
             authDomain: "my-light-site.firebaseapp.com",
@@ -303,223 +190,90 @@
             messagingSenderId: "870998893975",
             appId: "1:870998893975:web:ce4b1d412168e07b5390d2"
         };
-
-        const supabaseUrl = "https://isnamqcyzimvlmaiczeu.supabase.co";
-        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzbmFtcWN5emltdmxtYWljemV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTQwODEsImV4cCI6MjA3ODAzMDA4MX0.WcwFDqu-22xMWanw3mWqrIN2M1llNBI-bDrO3QkmlMI";
-
-        const supabase = createClient(supabaseUrl, supabaseKey);
         const db = getFirestore(initializeApp(firebaseConfig));
 
-        // DOM 元素
-        const addBtn = document.getElementById('addComment');
-        const commentsContainer = document.getElementById('commentsContainer');
-        const statusEl = document.getElementById('uploadStatus');
-        const usageEl = document.getElementById('storageUsage');
-        const langToggle = document.getElementById('langToggle');
-        const textArea = document.getElementById('cText');
-        const previewDiv = document.getElementById('markdownPreview');
+        // Supabase
+        const supabase = createClient("https://isnamqcyzimvlmaiczeu.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzbmFtcWN5emltdmxtYWljemV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTQwODEsImV4cCI6MjA3ODAzMDA4MX0.WcwFDqu-22xMWanw3mWqrIN2M1llNBI-bDrO3QkmlMI");
 
-        const latexInput = document.getElementById('latexInput');
-        const latexPreview = document.getElementById('latexPreview');
-        const renderLatexBtn = document.getElementById('renderLatexBtn');
-        const clearLatexBtn = document.getElementById('clearLatexBtn');
+        // DOM
+        const addBtn = document.getElementById("addComment"), commentsContainer = document.getElementById("commentsContainer"),
+            statusEl = document.getElementById("uploadStatus"), usageEl = document.getElementById("storageUsage");
 
-        const pyEditor = document.getElementById('pyEditor');
-        const runPyBtn = document.getElementById('runPyBtn');
-        const clearPyBtn = document.getElementById('clearPyBtn');
-        const pyOutput = document.getElementById('pyOutput');
+        // CodeMirror 初始化
+        const latexEditor = CodeMirror.fromTextArea(document.getElementById("latexEditor"), { mode: "stex", theme: "dracula", lineNumbers: true });
+        const pyEditor = CodeMirror.fromTextArea(document.getElementById("pyEditor"), { mode: "python", theme: "dracula", lineNumbers: true });
 
-        // marked 配置
-        marked.setOptions({ breaks: true, gfm: true });
+        // LaTeX 实时预览
+        latexEditor.on("change", () => { document.getElementById("latexPreview").innerHTML = latexEditor.getValue(); MathJax.typesetPromise(["latexPreview"]); });
 
-        // ========== Markdown 实时预览（并触发 MathJax） ==========
-        textArea.addEventListener('input', async () => {
-            const raw = textArea.value;
-            previewDiv.innerHTML = marked.parse(raw || "*Markdown 实时预览 / Live Preview*");
-            if (window.MathJax && MathJax.typesetPromise) {
-                try { await MathJax.typesetPromise([previewDiv]); } catch (e) { console.warn('MathJax render error', e); }
-            }
-        });
-
-        // ========== LaTeX 渲染按钮 ==========
-        renderLatexBtn.addEventListener('click', async () => {
-            const v = latexInput.value.trim();
-            if (!v) { latexPreview.innerHTML = "<span class='small'>请输入 LaTeX 内容</span>"; return; }
-            // 直接把用户输入（可能包含 $$...$$）放入容器
-            latexPreview.innerHTML = v;
-            if (window.MathJax && MathJax.typesetPromise) {
-                try { await MathJax.typesetPromise([latexPreview]); } catch (e) { console.warn('MathJax render error', e); }
-            }
-        });
-        clearLatexBtn.addEventListener('click', () => { latexInput.value = ''; latexPreview.innerHTML = ''; });
-
-        // ========== Skulpt (Python in browser) 执行环境 ==========
-        function outf(text) {
-            pyOutput.textContent += text;
-        }
-        function builtinRead(x) {
-            if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
-                throw "File not found: '" + x + "'";
-            return Sk.builtinFiles["files"][x];
-        }
-
-        runPyBtn.addEventListener('click', async () => {
-            pyOutput.textContent = ''; // 清空
-            const prog = pyEditor.value;
-            // 配置 Skulpt
-            Sk.configure({ output: outf, read: builtinRead, inputfun: function (prompt) { return window.prompt(prompt); } });
+        // Python 运行
+        let pyodide;
+        async function initPy() { pyodide = await loadPyodide(); }
+        initPy();
+        document.getElementById("runPython").onclick = async () => {
+            if (!pyodide) return alert("Python 环境加载中...");
+            const code = pyEditor.getValue();
             try {
-                await Sk.misceval.asyncToPromise(function () {
-                    return Sk.importMainWithBody("<stdin>", false, prog, true);
-                });
-            } catch (err) {
-                pyOutput.textContent += "Error: " + err.toString();
-                console.error(err);
-            }
-        });
-        clearPyBtn.addEventListener('click', () => { pyOutput.textContent = ''; });
-
-        // ========== 多语言切换（简体中文 & English） ==========
-        let lang = 'zh';
-        const texts = {
-            zh: { title: "自然窥探者 · Firebase + Supabase 上传测试", desc: "上传 PDF 或图片评论，全网可见", submit: "提交评论", name: "名字 (必填)", email: "邮箱 (可选)", comment: "评论内容 (支持 Markdown & LaTeX)", switch: "🌐 English" },
-            en: { title: "Natural Observer · Firebase + Supabase Upload Demo", desc: "Upload PDFs or images — visible to everyone worldwide.", submit: "Post Comment", name: "Name (required)", email: "Email (optional)", comment: "Comment (Markdown & LaTeX supported)", switch: "🌐 中文" }
+                const out = await pyodide.runPythonAsync(code);
+                document.getElementById("pyOutput").textContent = out ?? "（无输出）";
+            } catch (e) { document.getElementById("pyOutput").textContent = "⚠️ " + e; }
         };
-        langToggle.addEventListener('click', () => {
-            lang = lang === 'zh' ? 'en' : 'zh';
-            const t = texts[lang];
-            document.getElementById('title').textContent = t.title;
-            document.getElementById('desc').textContent = t.desc;
-            document.getElementById('addComment').textContent = t.submit;
-            document.getElementById('cName').placeholder = t.name;
-            document.getElementById('cEmail').placeholder = t.email;
-            document.getElementById('cText').placeholder = t.comment;
-            langToggle.textContent = t.switch;
-            // update storage text
-            showStorageUsage();
-        });
 
-        // ========== Supabase 存储使用情况（示例） ==========
+        // 存储显示（带缓存）
         async function showStorageUsage() {
             try {
+                let cached = localStorage.getItem("storageMB");
+                if (cached) usageEl.innerHTML = cached;
                 let totalBytes = 0;
-                const { data, error } = await supabase.storage.from('p').list('', { limit: 1000 });
+                const { data, error } = await supabase.storage.from("p").list("uploads", { limit: 1000 });
                 if (error) throw error;
-                for (const file of data) if (file.metadata?.size) totalBytes += Number(file.metadata.size);
-                const usedMB = (totalBytes / (1024 * 1024)).toFixed(2);
-                const totalMB = 1024;
+                for (const f of data) if (f.metadata?.size) totalBytes += Number(f.metadata.size);
+                const usedMB = (totalBytes / (1024 * 1024)).toFixed(2), totalMB = 1024;
                 const remainMB = (totalMB - usedMB).toFixed(2);
                 const percent = Math.min(((usedMB / totalMB) * 100).toFixed(1), 100);
-                let color = "#22c55e";
-                if (percent > 70) color = "#f59e0b";
-                if (percent > 90) color = "#ef4444";
-                usageEl.innerHTML = `💾 ${lang === 'zh' ? '当前使用' : 'Used'}：<b>${usedMB} MB</b> / ${totalMB} MB （${lang === 'zh' ? '剩余' : 'Remaining'} <b>${remainMB} MB</b>）`;
-            } catch (e) { usageEl.textContent = "⚠️ Storage info unavailable"; console.error(e); }
+                const html = `💾 当前使用：<b>${usedMB}MB</b> / ${totalMB}MB（剩余 <b>${remainMB}MB</b>）<div style="background:rgba(255,255,255,0.2);border-radius:6px;overflow:hidden;margin-top:4px;height:8px;"><div style="width:${percent}%;background:#3b82f6;height:8px;"></div></div>`;
+                usageEl.innerHTML = html; localStorage.setItem("storageMB", html);
+            } catch (e) { usageEl.textContent = "⚠️ 无法获取存储信息"; }
         }
+        setInterval(showStorageUsage, 30000);
 
-        // ========== 从 Firestore 加载与渲染评论 ==========
+        // 加载评论
         async function renderComments() {
             commentsContainer.innerHTML = "<div class='small'>加载中...</div>";
-            try {
-                const q = query(collection(db, "comments"), orderBy("ts", "desc"));
-                const snap = await getDocs(q);
-                commentsContainer.innerHTML = "";
-                snap.forEach(doc => {
-                    const c = doc.data();
-                    const el = document.createElement('div');
-                    el.className = "comment";
-                    const htmlContent = marked.parse(c.text || "");
-                    el.innerHTML = `
-                        <div style="display:flex;justify-content:space-between;align-items:center;">
-                          <div><strong>${c.name || (lang === 'zh' ? '访客' : 'Guest')}</strong></div>
-                          <div class="small" style="color:var(--muted)">${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</div>
-                        </div>
-                        <div style="margin-top:8px;">${htmlContent}</div>
-                        ${c.fileUrl ? `<div><a class="file-link" href="${c.fileUrl}" target="_blank">📎 ${c.fileName}</a></div>` : ''}
-                    `;
-                    commentsContainer.appendChild(el);
-                    // MathJax 渲染
-                    if (window.MathJax && MathJax.typesetPromise) {
-                        MathJax.typesetPromise([el]).catch(e => console.warn('MathJax failed', e));
-                    }
-                });
-                if (!snap.size) commentsContainer.innerHTML = "<div class='small muted'>暂无评论 / No comments</div>";
-            } catch (e) {
-                console.error(e);
-                commentsContainer.innerHTML = "<div class='small'>加载评论失败（请检查 Firestore 权限）</div>";
-            }
+            const snap = await getDocs(query(collection(db, "comments"), orderBy("ts", "desc")));
+            commentsContainer.innerHTML = "";
+            snap.forEach(d => {
+                const c = d.data(), div = document.createElement("div");
+                div.className = "comment";
+                div.innerHTML = `<div><b>${c.name}</b> <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ""}</span></div>
+        <div>${marked.parse(c.text || "")}</div>${c.fileUrl ? `<a href='${c.fileUrl}' class='file-link' target='_blank'>📎 ${c.fileName}</a>` : ""}`;
+                commentsContainer.appendChild(div);
+                if (window.MathJax) MathJax.typesetPromise([div]);
+            });
         }
 
-        // ========== 上传文件到 Supabase 并把评论写入 Firestore ==========
-        addBtn.addEventListener('click', async () => {
-            const name = document.getElementById('cName').value.trim();
-            const email = document.getElementById('cEmail').value.trim();
-            const text = document.getElementById('cText').value.trim();
-            const fileInput = document.getElementById('cFile');
-
-            if (!name || !text) {
-                alert(lang === 'zh' ? "请填写名字和评论内容" : "Please fill in name and comment");
-                return;
-            }
-
-            statusEl.textContent = lang === 'zh' ? "正在上传..." : "Uploading...";
+        // 上传评论
+        addBtn.onclick = async () => {
+            const name = document.getElementById("cName").value.trim();
+            const text = document.getElementById("cText").value.trim() + "\n\n" + latexEditor.getValue() + "\n```python\n" + pyEditor.getValue() + "\n```";
+            const file = document.getElementById("cFile").files[0];
+            if (!name || !text) return alert("请填写名字和评论");
+            statusEl.textContent = "正在上传...";
             let fileUrl = "", fileName = "";
-
-            const file = fileInput.files[0];
             if (file) {
                 fileName = file.name;
-                const safeName = encodeURIComponent(file.name.replace(/[^\w.\-]/g, '_'));
-                const filePath = `uploads/${Date.now()}_${safeName}`;
-                const { error } = await supabase.storage.from('p').upload(filePath, file);
-                if (!error) {
-                    const { data } = supabase.storage.from('p').getPublicUrl(filePath);
-                    fileUrl = data.publicUrl;
-                } else {
-                    console.error('Supabase upload error', error);
-                    // 继续，也可以提前返回
-                }
+                const filePath = `uploads/${Date.now()}_${encodeURIComponent(file.name)}`;
+                const { error } = await supabase.storage.from("p").upload(filePath, file);
+                if (!error) { const { data } = supabase.storage.from("p").getPublicUrl(filePath); fileUrl = data.publicUrl; }
             }
-
-            try {
-                await addDoc(collection(db, "comments"), { name, email, text, fileUrl, fileName, ts: serverTimestamp() });
-                statusEl.textContent = lang === 'zh' ? "✅ 已上传并发布" : "✅ Uploaded successfully";
-                // 清空输入
-                fileInput.value = "";
-                document.getElementById('cText').value = "";
-                previewDiv.innerHTML = "*Markdown 实时预览 / Live Preview*";
-                // 刷新
-                renderComments();
-                showStorageUsage();
-            } catch (e) {
-                console.error(e);
-                statusEl.textContent = lang === 'zh' ? "保存失败（检查 Firestore 权限）" : "Save failed (check Firestore rules)";
-            }
-        });
-
-        // 初始加载
-        renderComments();
-        showStorageUsage();
-
+            await addDoc(collection(db, "comments"), { name, text, fileUrl, fileName, ts: serverTimestamp() });
+            statusEl.textContent = "✅ 已发布"; renderComments(); showStorageUsage();
+        };
+        renderComments(); showStorageUsage();
     </script>
 
     <script>
-        // 粒子背景初始化（简单）
-        particlesJS("particles-js", {
-            particles: {
-                number: { value: 80, density: { enable: true, value_area: 800 } },
-                color: { value: "#60a5fa" },
-                shape: { type: "circle" },
-                opacity: { value: 0.45 },
-                size: { value: 2 },
-                line_linked: { enable: true, distance: 120, color: "#60a5fa", opacity: 0.2, width: 1 },
-                move: { enable: true, speed: 1.2, out_mode: "bounce" }
-            },
-            interactivity: {
-                events: { onhover: { enable: true, mode: "repulse" } },
-                modes: { repulse: { distance: 80 } }
-            },
-            retina_detect: true
-        });
+        particlesJS("particles-js", { particles: { number: { value: 90 }, color: { value: "#60a5fa" }, shape: { type: "circle" }, opacity: { value: 0.5 }, size: { value: 2 }, line_linked: { enable: true, distance: 120, color: "#60a5fa", opacity: 0.3, width: 1 }, move: { enable: true, speed: 1.3, out_mode: "bounce" } }, interactivity: { events: { onhover: { enable: true, mode: "repulse" } }, modes: { repulse: { distance: 100 } } }, retina_detect: true });
     </script>
 </body>
 </html>
