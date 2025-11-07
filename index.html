@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>自然窥探者 · Firebase + Supabase 上传测试</title>
 
-    <!-- 粒子背景 -->
+    <!-- 背景粒子 -->
     <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
 
     <!-- 数学公式 -->
@@ -17,16 +17,29 @@
     </script>
     <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 
-    <!-- Skulpt -->
+    <!-- Python Skulpt -->
     <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
 
     <style>
+        :root {
+            --bg1: #101522;
+            --bg2: #1e293b;
+            --card: rgba(255,255,255,0.08);
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --accent: #3b82f6;
+            --radius: 12px;
+        }
+
         body {
+            font-family: Inter,"Microsoft YaHei";
+            background: linear-gradient(160deg,var(--bg1),var(--bg2));
+            color: var(--text);
             margin: 0;
-            font-family: "Inter","Microsoft YaHei";
-            background: #0f172a;
-            color: #f1f5f9;
+            padding: 0;
+            overflow-x: hidden;
+            min-height: 100vh;
         }
 
         #particles-js {
@@ -39,78 +52,160 @@
         }
 
         .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 18px;
             max-width: 900px;
             margin: 36px auto;
-            background: rgba(255,255,255,0.08);
-            border-radius: 12px;
-            padding: 20px;
             backdrop-filter: blur(10px);
         }
 
-        textarea, input {
-            width: 100%;
-            margin: 6px 0;
-            background: rgba(255,255,255,0.05);
+        h2 {
+            margin: 0 0 6px 0;
             color: #fff;
-            border: none;
-            border-radius: 6px;
-            padding: 8px;
+        }
+
+        .small {
+            font-size: 13px;
+            color: var(--muted);
         }
 
         button {
-            background: #3b82f6;
+            background: var(--accent);
             color: #fff;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             padding: 8px 12px;
             cursor: pointer;
             font-weight: 600;
+            transition: 0.16s;
         }
 
             button:hover {
-                background: #2563eb;
+                transform: translateY(-1px);
             }
+
+        input, textarea {
+            background: rgba(255,255,255,0.06);
+            color: var(--text);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 6px;
+            padding: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,"Courier New",monospace;
+            resize: vertical;
+        }
+
+            input:focus, textarea:focus {
+                outline: none;
+                border-color: var(--accent);
+            }
+
+        .comment {
+            border-top: 1px solid rgba(255,255,255,0.15);
+            margin-top: 8px;
+            padding-top: 8px;
+        }
+
+        .file-link {
+            color: var(--accent);
+            text-decoration: underline;
+            font-size: 13px;
+        }
+
+        #markdownPreview {
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: rgba(255,255,255,0.02);
+            border-radius: 6px;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .lang-switch {
+            float: right;
+            font-size: 13px;
+            color: var(--muted);
+            cursor: pointer;
+        }
+
+        #pythonArea {
+            display: none;
+            margin-top: 16px;
+        }
+
+        #pythonCode {
+            min-height: 120px;
+        }
 
         #pythonOutput {
             background: rgba(0,0,0,0.3);
             border-radius: 6px;
             padding: 10px;
+            margin-top: 8px;
             white-space: pre-wrap;
             font-family: monospace;
-            margin-top: 8px;
         }
     </style>
 </head>
 <body>
     <div id="particles-js"></div>
+
     <div class="card">
-        <h2>自然窥探者 · Firebase + Supabase 上传测试</h2>
-        <p>上传 PDF 或图片评论，全网可见</p>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+                <h2 id="title">自然窥探者 · Firebase + Supabase 上传测试</h2>
+                <div class="small" id="desc">上传 PDF 或图片评论，全网可见</div>
+            </div>
+            <span class="lang-switch" id="langToggle">🌐 English</span>
+        </div>
 
+        <label class="small" for="cName">名字 (必填)</label>
         <input id="cName" placeholder="名字 (必填)">
-        <textarea id="cText" placeholder="评论内容 (Markdown + LaTeX)"></textarea>
+        <label class="small" for="cEmail">邮箱 (可选)</label>
+        <input id="cEmail" placeholder="邮箱 (可选)">
+        <label class="small" for="cText">评论内容 (支持 Markdown + LaTeX)</label>
+        <textarea id="cText" style="min-height:140px;" placeholder="输入 Markdown，可包含 $E=mc^2$ 或 $$\\int_0^1 x dx$$"></textarea>
+        <label class="small" for="cFile">上传文件（PDF / PNG / JPG）</label>
         <input id="cFile" type="file" accept="application/pdf,image/png,image/jpeg">
-        <button id="addComment">提交评论</button>
-        <div id="uploadStatus" style="margin-top:8px;color:#94a3b8"></div>
+        <div style="margin-top:10px;"><button id="addComment">提交评论</button><span id="uploadStatus" style="margin-left:12px;color:var(--muted)"></span></div>
 
-        <h3 style="margin-top:20px;">Python 代码实验区</h3>
-        <textarea id="pythonCode" placeholder="print('Hello, world!')"></textarea>
-        <div style="margin:6px 0;">
-            <label><input type="checkbox" id="savePythonResult"> 将运行结果保留到评论区</label>
-        </div>
-        <button id="runPython">▶️ 运行代码</button>
-        <pre id="pythonOutput">（运行结果将在此显示）</pre>
+        <div style="margin-top:14px;"><div class="small">Markdown 实时预览</div><div id="markdownPreview">*Markdown 实时预览 / Live Preview*</div></div>
 
-        <div id="turtleContainer" style="margin-top:10px;text-align:center;">
-            <canvas id="__canvas__" width="480" height="360" style="background:#fff;border-radius:8px;"></canvas>
+        <!-- ✅ Python 编译区 -->
+        <div style="margin-top:16px;">
+            <button id="togglePython">🐍 打开 Python 编译区</button>
+            <div id="pythonArea">
+                <div class="small">在下方编写 Python 代码，可直接运行：</div>
+                <textarea id="pythonCode" placeholder="print('Hello, Python!')"></textarea>
+                <div style="margin-top:8px;">
+                    <label class="small"><input type="checkbox" id="savePythonResult"> 将运行结果保留到评论区</label>
+                </div>
+                <div style="margin-top:8px;"><button id="runPython">▶️ 运行代码</button></div>
+                <pre id="pythonOutput">（运行结果将在此显示）</pre>
+
+                <!-- ✅ 🐢 Turtle 绘图区 -->
+                <div id="turtleContainer" style="margin-top:10px;text-align:center;">
+                    <canvas id="__canvas__" width="480" height="360" style="background:#fff;border-radius:8px;display:none;"></canvas>
+                </div>
+            </div>
         </div>
+
+        <h3 style="margin-top:18px;">已有评论</h3>
+        <div id="commentsContainer"></div>
+        <div class="small" id="storageUsage" style="margin-top:16px;">💾 加载中...</div>
     </div>
 
-    <!-- ✅ JS逻辑 -->
+    <!-- ✅ 主逻辑 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
         import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+        import { marked } from "https://cdn.jsdelivr.net/npm/marked@12.0.2/lib/marked.esm.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCPDiyZtMUe_RNudnvXmaZGUfwhJjKVXOs",
@@ -122,36 +217,136 @@
         };
         const supabaseUrl = "https://isnamqcyzimvlmaiczeu.supabase.co";
         const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzbmFtcWN5emltdmxtYWljemV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTQwODEsImV4cCI6MjA3ODAzMDA4MX0.WcwFDqu-22xMWanw3mWqrIN2M1llNBI-bDrO3QkmlMI";
-        const db = getFirestore(initializeApp(firebaseConfig));
         const supabase = createClient(supabaseUrl, supabaseKey);
+        const db = getFirestore(initializeApp(firebaseConfig));
 
+        const addBtn = document.getElementById('addComment');
+        const textArea = document.getElementById('cText');
+        const previewDiv = document.getElementById('markdownPreview');
+        const commentsContainer = document.getElementById('commentsContainer');
+        const statusEl = document.getElementById('uploadStatus');
+        const usageEl = document.getElementById('storageUsage');
+        const langToggle = document.getElementById('langToggle');
+
+        marked.setOptions({ breaks: true, gfm: true });
+        let lang = 'zh';
+        const texts = {
+            zh: { title: "自然窥探者 · Firebase + Supabase 上传测试", desc: "上传 PDF 或图片评论，全网可见", submit: "提交评论", switch: "🌐 English" },
+            en: { title: "Natural Observer · Firebase + Supabase Upload Demo", desc: "Upload PDFs or images — visible worldwide", submit: "Post Comment", switch: "🌐 中文" }
+        };
+        langToggle.addEventListener('click', () => {
+            lang = lang === 'zh' ? 'en' : 'zh';
+            const t = texts[lang];
+            document.getElementById('title').textContent = t.title;
+            document.getElementById('desc').textContent = t.desc;
+            document.getElementById('addComment').textContent = t.submit;
+            langToggle.textContent = t.switch;
+            showStorageUsage();
+        });
+
+        textArea.addEventListener('input', async () => {
+            previewDiv.innerHTML = marked.parse(textArea.value || "*Markdown 实时预览 / Live Preview*");
+            if (window.MathJax && MathJax.typesetPromise) { await MathJax.typesetPromise([previewDiv]); }
+        });
+
+        async function showStorageUsage(force = false) {
+            try {
+                const { data, error } = await supabase.storage.from('p').list('', { limit: 1000 });
+                if (error) throw error;
+                let total = 0;
+                for (const f of data) if (f.metadata?.size) total += Number(f.metadata.size);
+                const usedMB = (total / (1024 * 1024)).toFixed(2);
+                const totalMB = 1024;
+                const remainMB = (totalMB - usedMB).toFixed(2);
+                const html = `💾 ${lang === 'zh' ? '当前使用' : 'Used'}：<b>${usedMB} MB</b> / ${totalMB} MB （${lang === 'zh' ? '剩余' : 'Remaining'} <b>${remainMB} MB</b>）`;
+                usageEl.innerHTML = html;
+            } catch (e) {
+                usageEl.textContent = "⚠️ Storage info unavailable";
+            }
+        }
+        setInterval(() => showStorageUsage(true), 30000);
+
+        async function renderComments() {
+            commentsContainer.innerHTML = "<div class='small'>加载中...</div>";
+            const q = query(collection(db, "comments"), orderBy("ts", "desc"));
+            const snap = await getDocs(q);
+            commentsContainer.innerHTML = "";
+            snap.forEach(doc => {
+                const c = doc.data();
+                const el = document.createElement('div');
+                el.className = "comment";
+                el.innerHTML = `<div style='display:flex;justify-content:space-between;'>
+              <b>${c.name || '访客'}</b>
+              <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span>
+            </div>
+            <div>${marked.parse(c.text || "")}</div>
+            ${c.fileUrl ? `<a class='file-link' href='${c.fileUrl}' target='_blank'>📎 ${c.fileName}</a>` : ''}`;
+                commentsContainer.appendChild(el);
+                if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([el]);
+            });
+            if (!snap.size) commentsContainer.innerHTML = "<div class='small'>暂无评论</div>";
+        }
+
+        addBtn.addEventListener('click', async () => {
+            const name = document.getElementById('cName').value.trim();
+            const email = document.getElementById('cEmail').value.trim();
+            const text = document.getElementById('cText').value.trim();
+            const fileInput = document.getElementById('cFile');
+            if (!name || !text) return alert(lang === 'zh' ? "请填写名字和评论" : "Please fill name and comment");
+            statusEl.textContent = lang === 'zh' ? "正在上传..." : "Uploading...";
+            let fileUrl = "", fileName = "";
+            const file = fileInput.files[0];
+            if (file) {
+                fileName = file.name;
+                const path = `uploads/${Date.now()}_${encodeURIComponent(file.name.replace(/[^\w.\-]/g, '_'))}`;
+                const { error } = await supabase.storage.from('p').upload(path, file);
+                if (!error) fileUrl = supabase.storage.from('p').getPublicUrl(path).data.publicUrl;
+            }
+            await addDoc(collection(db, "comments"), { name, email, text, fileUrl, fileName, ts: serverTimestamp() });
+            statusEl.textContent = lang === 'zh' ? "✅ 已发布" : "✅ Posted";
+            fileInput.value = ""; textArea.value = "";
+            previewDiv.innerHTML = "*Markdown 实时预览 / Live Preview*";
+            renderComments(); showStorageUsage(true);
+        });
+
+        renderComments(); showStorageUsage();
+
+        /* ✅ Python + Turtle */
+        const togglePython = document.getElementById('togglePython');
+        const pythonArea = document.getElementById('pythonArea');
         const runPython = document.getElementById('runPython');
         const outputEl = document.getElementById('pythonOutput');
+        const savePythonResult = document.getElementById('savePythonResult');
         const turtleContainer = document.getElementById('turtleContainer');
+
+        togglePython.addEventListener('click', () => {
+            pythonArea.style.display = pythonArea.style.display === 'none' ? 'block' : 'none';
+            togglePython.textContent = pythonArea.style.display === 'none' ? '🐍 打开 Python 编译区' : '❌ 关闭 Python 编译区';
+        });
 
         runPython.addEventListener('click', async () => {
             const code = document.getElementById('pythonCode').value;
             outputEl.textContent = '';
 
-            // ✅ 重建 canvas 并重新绑定 Sk.TurtleGraphics
+            // ✅ 重建 canvas，防止 null 错误
             turtleContainer.innerHTML = '<canvas id="__canvas__" width="480" height="360" style="background:#fff;border-radius:8px;"></canvas>';
             const canvas = document.getElementById('__canvas__');
 
-            const outf = t => outputEl.textContent += t + '\n';
+            const outf = text => outputEl.textContent += text + '\n';
             Sk.configure({
                 output: outf,
                 read: x => Sk.builtinFiles.files[x],
-                __future__: Sk.python3
+                __future__: Sk.python3,
+                turtle: { canvasID: "__canvas__", width: 480, height: 360 }
             });
-
-            // ✅ 强制绑定 turtle canvas
-            Sk.TurtleGraphics = Sk.TurtleGraphics || {};
-            Sk.TurtleGraphics.target = '__canvas__';
-            Sk.TurtleGraphics.width = 480;
-            Sk.TurtleGraphics.height = 360;
-
             try {
                 await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true));
+                if (savePythonResult.checked) {
+                    const name = document.getElementById('cName').value.trim() || 'Python 用户';
+                    const text = "```\n" + code + "\n```\n\n**运行结果：**\n```\n" + outputEl.textContent + "\n```";
+                    await addDoc(collection(db, "comments"), { name, text, fileUrl: "", fileName: "", ts: serverTimestamp() });
+                    renderComments();
+                }
             } catch (err) {
                 outputEl.textContent += "\n⚠️ " + err.toString();
             }
@@ -161,9 +356,8 @@
     <script>
         particlesJS("particles-js", {
             particles: {
-                number: { value: 80 }, color: { value: "#60a5fa" },
-                shape: { type: "circle" }, opacity: { value: 0.45 },
-                size: { value: 2 },
+                number: { value: 80 }, color: { value: "#60a5fa" }, shape: { type: "circle" },
+                opacity: { value: 0.45 }, size: { value: 2 },
                 line_linked: { enable: true, distance: 120, color: "#60a5fa", opacity: 0.2, width: 1 },
                 move: { enable: true, speed: 1.2, out_mode: "bounce" }
             },
