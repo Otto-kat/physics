@@ -189,7 +189,9 @@
                 <pre id="pythonOutput">（运行结果将在此显示）</pre>
 
                 <!-- ✅ 🐢 Turtle 绘图区 -->
-                <div id="__canvas__" style="background:#fff;border-radius:8px;margin-top:10px;width:480px;height:360px;display:none;"></div>
+                <div id="turtleContainer" style="margin-top:10px;text-align:center;">
+                    <canvas id="__canvas__" width="480" height="360" style="background:#fff;border-radius:8px;display:none;"></canvas>
+                </div>
             </div>
         </div>
 
@@ -233,7 +235,8 @@
             en: { title: "Natural Observer · Firebase + Supabase Upload Demo", desc: "Upload PDFs or images — visible worldwide", submit: "Post Comment", switch: "🌐 中文" }
         };
         langToggle.addEventListener('click', () => {
-            lang = lang === 'zh' ? 'en' : 'zh'; const t = texts[lang];
+            lang = lang === 'zh' ? 'en' : 'zh';
+            const t = texts[lang];
             document.getElementById('title').textContent = t.title;
             document.getElementById('desc').textContent = t.desc;
             document.getElementById('addComment').textContent = t.submit;
@@ -248,42 +251,40 @@
 
         async function showStorageUsage(force = false) {
             try {
-                const cacheKey = 'storageUsageCache';
-                if (!force) {
-                    const cached = localStorage.getItem(cacheKey);
-                    if (cached) usageEl.innerHTML = cached;
-                }
                 const { data, error } = await supabase.storage.from('p').list('', { limit: 1000 });
                 if (error) throw error;
-                let total = 0; for (const f of data) if (f.metadata?.size) total += Number(f.metadata.size);
+                let total = 0;
+                for (const f of data) if (f.metadata?.size) total += Number(f.metadata.size);
                 const usedMB = (total / (1024 * 1024)).toFixed(2);
-                const totalMB = 1024; const remainMB = (totalMB - usedMB).toFixed(2);
+                const totalMB = 1024;
+                const remainMB = (totalMB - usedMB).toFixed(2);
                 const html = `💾 ${lang === 'zh' ? '当前使用' : 'Used'}：<b>${usedMB} MB</b> / ${totalMB} MB （${lang === 'zh' ? '剩余' : 'Remaining'} <b>${remainMB} MB</b>）`;
-                usageEl.innerHTML = html; localStorage.setItem(cacheKey, html);
-            } catch (e) { usageEl.textContent = "⚠️ Storage info unavailable"; console.error(e); }
+                usageEl.innerHTML = html;
+            } catch (e) {
+                usageEl.textContent = "⚠️ Storage info unavailable";
+            }
         }
         setInterval(() => showStorageUsage(true), 30000);
 
         async function renderComments() {
             commentsContainer.innerHTML = "<div class='small'>加载中...</div>";
-            try {
-                const q = query(collection(db, "comments"), orderBy("ts", "desc"));
-                const snap = await getDocs(q);
-                commentsContainer.innerHTML = "";
-                snap.forEach(doc => {
-                    const c = doc.data(); const el = document.createElement('div');
-                    el.className = "comment";
-                    el.innerHTML = `<div style='display:flex;justify-content:space-between;'>
-         <b>${c.name || '访客'}</b>
-         <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span>
-       </div>
-       <div>${marked.parse(c.text || "")}</div>
-       ${c.fileUrl ? `<a class='file-link' href='${c.fileUrl}' target='_blank'>📎 ${c.fileName}</a>` : ''}`;
-                    commentsContainer.appendChild(el);
-                    if (window.MathJax && MathJax.typesetPromise) { MathJax.typesetPromise([el]); }
-                });
-                if (!snap.size) commentsContainer.innerHTML = "<div class='small'>暂无评论</div>";
-            } catch (e) { console.error(e); commentsContainer.innerHTML = "<div class='small'>加载失败</div>"; }
+            const q = query(collection(db, "comments"), orderBy("ts", "desc"));
+            const snap = await getDocs(q);
+            commentsContainer.innerHTML = "";
+            snap.forEach(doc => {
+                const c = doc.data();
+                const el = document.createElement('div');
+                el.className = "comment";
+                el.innerHTML = `<div style='display:flex;justify-content:space-between;'>
+              <b>${c.name || '访客'}</b>
+              <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span>
+            </div>
+            <div>${marked.parse(c.text || "")}</div>
+            ${c.fileUrl ? `<a class='file-link' href='${c.fileUrl}' target='_blank'>📎 ${c.fileName}</a>` : ''}`;
+                commentsContainer.appendChild(el);
+                if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([el]);
+            });
+            if (!snap.size) commentsContainer.innerHTML = "<div class='small'>暂无评论</div>";
         }
 
         addBtn.addEventListener('click', async () => {
@@ -291,7 +292,7 @@
             const email = document.getElementById('cEmail').value.trim();
             const text = document.getElementById('cText').value.trim();
             const fileInput = document.getElementById('cFile');
-            if (!name || !text) { alert(lang === 'zh' ? "请填写名字和评论" : "Please fill name and comment"); return; }
+            if (!name || !text) return alert(lang === 'zh' ? "请填写名字和评论" : "Please fill name and comment");
             statusEl.textContent = lang === 'zh' ? "正在上传..." : "Uploading...";
             let fileUrl = "", fileName = "";
             const file = fileInput.files[0];
@@ -299,26 +300,24 @@
                 fileName = file.name;
                 const path = `uploads/${Date.now()}_${encodeURIComponent(file.name.replace(/[^\w.\-]/g, '_'))}`;
                 const { error } = await supabase.storage.from('p').upload(path, file);
-                if (!error) { fileUrl = supabase.storage.from('p').getPublicUrl(path).data.publicUrl; }
+                if (!error) fileUrl = supabase.storage.from('p').getPublicUrl(path).data.publicUrl;
             }
-            try {
-                await addDoc(collection(db, "comments"), { name, email, text, fileUrl, fileName, ts: serverTimestamp() });
-                statusEl.textContent = lang === 'zh' ? "✅ 已发布" : "✅ Posted";
-                fileInput.value = ""; document.getElementById('cText').value = "";
-                previewDiv.innerHTML = "*Markdown 实时预览 / Live Preview*";
-                renderComments(); showStorageUsage(true);
-            } catch (e) { console.error(e); statusEl.textContent = "❌ Save failed"; }
+            await addDoc(collection(db, "comments"), { name, email, text, fileUrl, fileName, ts: serverTimestamp() });
+            statusEl.textContent = lang === 'zh' ? "✅ 已发布" : "✅ Posted";
+            fileInput.value = ""; textArea.value = "";
+            previewDiv.innerHTML = "*Markdown 实时预览 / Live Preview*";
+            renderComments(); showStorageUsage(true);
         });
 
         renderComments(); showStorageUsage();
 
-        /* ✅ Python 功能逻辑（含 turtle 支持） */
+        /* ✅ Python + Turtle */
         const togglePython = document.getElementById('togglePython');
         const pythonArea = document.getElementById('pythonArea');
         const runPython = document.getElementById('runPython');
         const outputEl = document.getElementById('pythonOutput');
         const savePythonResult = document.getElementById('savePythonResult');
-        const canvas = document.getElementById('__canvas__');
+        const turtleContainer = document.getElementById('turtleContainer');
 
         togglePython.addEventListener('click', () => {
             pythonArea.style.display = pythonArea.style.display === 'none' ? 'block' : 'none';
@@ -328,8 +327,11 @@
         runPython.addEventListener('click', async () => {
             const code = document.getElementById('pythonCode').value;
             outputEl.textContent = '';
-            canvas.style.display = 'block';
-            canvas.innerHTML = '';
+
+            // ✅ 重建 canvas，防止 null 错误
+            turtleContainer.innerHTML = '<canvas id="__canvas__" width="480" height="360" style="background:#fff;border-radius:8px;"></canvas>';
+            const canvas = document.getElementById('__canvas__');
+
             const outf = text => outputEl.textContent += text + '\n';
             Sk.configure({
                 output: outf,
@@ -345,7 +347,9 @@
                     await addDoc(collection(db, "comments"), { name, text, fileUrl: "", fileName: "", ts: serverTimestamp() });
                     renderComments();
                 }
-            } catch (err) { outputEl.textContent += "\n⚠️ " + err.toString(); }
+            } catch (err) {
+                outputEl.textContent += "\n⚠️ " + err.toString();
+            }
         });
     </script>
 
