@@ -8,7 +8,7 @@
     <!-- 背景粒子 -->
     <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
 
-    <!-- 数学公式 -->
+    <!-- MathJax -->
     <script>
         window.MathJax = {
             tex: { inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
@@ -17,7 +17,7 @@
     </script>
     <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 
-    <!-- Python Skulpt -->
+    <!-- Skulpt -->
     <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
 
@@ -96,7 +96,7 @@
         }
 
         textarea {
-            font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,"Courier New",monospace;
+            font-family: ui-monospace,Menlo,Monaco,"Courier New",monospace;
             resize: vertical;
         }
 
@@ -169,13 +169,11 @@
             animation: blink 1s ease-in-out 2;
         }
 
-        /* ✅ Tesla quote 样式 */
         footer {
             text-align: center;
             font-size: 13px;
             color: #94a3b8;
-            margin-top: 30px;
-            margin-bottom: 30px;
+            margin: 30px 0;
             font-style: italic;
             letter-spacing: 0.3px;
         }
@@ -183,7 +181,6 @@
 </head>
 <body>
     <div id="particles-js"></div>
-
     <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;">
             <div>
@@ -192,7 +189,6 @@
             </div>
             <span class="lang-switch" id="langToggle">🌐 English</span>
         </div>
-
         <label class="small" for="cName">名字 (必填)</label>
         <input id="cName" placeholder="名字 (必填)">
         <label class="small" for="cEmail">邮箱 (可选)</label>
@@ -201,11 +197,17 @@
         <textarea id="cText" style="min-height:140px;" placeholder="输入 Markdown，可包含 $E=mc^2$ 或 $$\\int_0^1 x dx$$"></textarea>
         <label class="small" for="cFile">上传文件（PDF / PNG / JPG）</label>
         <input id="cFile" type="file" accept="application/pdf,image/png,image/jpeg">
-        <div style="margin-top:10px;"><button id="addComment">提交评论</button><span id="uploadStatus" style="margin-left:12px;color:var(--muted)"></span></div>
+        <div style="margin-top:10px;">
+            <button id="addComment">提交评论</button>
+            <span id="uploadStatus" style="margin-left:12px;color:var(--muted)"></span>
+        </div>
 
-        <div style="margin-top:14px;"><div class="small">Markdown 实时预览</div><div id="markdownPreview">*Markdown 实时预览 / Live Preview*</div></div>
+        <div style="margin-top:14px;">
+            <div class="small">Markdown 实时预览</div>
+            <div id="markdownPreview">*Markdown 实时预览 / Live Preview*</div>
+        </div>
 
-        <!-- ✅ Python 区 -->
+        <!-- Python 区 -->
         <div style="margin-top:16px;">
             <button id="togglePython">🐍 打开 Python 编译区</button>
             <div id="pythonArea">
@@ -230,12 +232,10 @@
         <div class="small" id="storageUsage" style="margin-top:16px;">💾 加载中...</div>
     </div>
 
-    <!-- ✅ Tesla 名言 -->
     <footer>
         “If you want to find the secrets of the universe, think in terms of energy, frequency and vibration.” — N. Tesla
     </footer>
 
-    <!-- ✅ 主逻辑（Firebase + Supabase + Python） -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
@@ -286,7 +286,7 @@
         });
 
         let updating = false;
-        async function showStorageUsage(force = false) {
+        async function showStorageUsage() {
             if (updating) return;
             updating = true;
             usageEl.classList.add('updating');
@@ -294,20 +294,19 @@
                 const { data, error } = await supabase.storage.from('p').list('', { limit: 1000 });
                 if (error) throw error;
                 let total = 0;
-                for (const f of data) if (f.metadata?.size) total += Number(f.metadata.size);
+                for (const f of data) {
+                    const size = f.metadata?.size ? Number(f.metadata.size) : 0;
+                    total += size;
+                }
                 const usedMB = (total / (1024 * 1024)).toFixed(2);
-                const totalMB = 1024;
-                const remainMB = (totalMB - usedMB).toFixed(2);
-                const html = `💾 ${lang === 'zh' ? '当前使用' : 'Used'}：<b>${usedMB} MB</b> / ${totalMB} MB （${lang === 'zh' ? '剩余' : 'Remaining'} <b>${remainMB} MB</b>）`;
-                usageEl.innerHTML = html;
-            } catch {
+                usageEl.innerHTML = `💾 ${lang === 'zh' ? '当前使用' : 'Used'}：<b>${usedMB} MB</b>`;
+            } catch (err) {
                 usageEl.textContent = "⚠️ Storage info unavailable";
             }
             usageEl.classList.remove('updating');
             updating = false;
         }
         showStorageUsage();
-        setInterval(showStorageUsage, 30000);
 
         async function renderComments() {
             commentsContainer.innerHTML = "<div class='small'>加载中...</div>";
@@ -319,16 +318,17 @@
                 const el = document.createElement('div');
                 el.className = "comment";
                 el.innerHTML = `<div style='display:flex;justify-content:space-between;'>
-                      <b>${c.name || '访客'}</b>
-                      <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span>
-                    </div>
-                    <div>${marked.parse(c.text || "")}</div>
-                    ${c.fileUrl ? `<a class='file-link' href='${c.fileUrl}' target='_blank'>📎 ${c.fileName}</a>` : ''}`;
+              <b>${c.name || '访客'}</b>
+              <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span>
+            </div>
+            <div>${marked.parse(c.text || "")}</div>
+            ${c.fileUrl ? `<a class='file-link' href='${c.fileUrl}' target='_blank'>📎 ${c.fileName}</a>` : ''}`;
                 commentsContainer.appendChild(el);
                 if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([el]);
             });
             if (!snap.size) commentsContainer.innerHTML = "<div class='small'>暂无评论</div>";
         }
+        renderComments();
 
         addBtn.addEventListener('click', async () => {
             const name = document.getElementById('cName').value.trim();
@@ -349,60 +349,7 @@
             statusEl.textContent = lang === 'zh' ? "✅ 已发布" : "✅ Posted";
             fileInput.value = ""; textArea.value = "";
             previewDiv.innerHTML = "*Markdown 实时预览 / Live Preview*";
-            renderComments(); showStorageUsage(true);
-        });
-
-        renderComments();
-
-        const togglePython = document.getElementById('togglePython');
-        const pythonArea = document.getElementById('pythonArea');
-        const runPython = document.getElementById('runPython');
-        const outputEl = document.getElementById('pythonOutput');
-        const savePythonResult = document.getElementById('savePythonResult');
-        const turtleContainer = document.getElementById('turtleContainer');
-        const toggleCanvas = document.getElementById('toggleCanvas');
-        const canvasEl = document.getElementById('__canvas__');
-
-        togglePython.addEventListener('click', () => {
-            pythonArea.style.display = pythonArea.style.display === 'none' ? 'block' : 'none';
-            togglePython.textContent = pythonArea.style.display === 'none' ? '🐍 打开 Python 编译区' : '❌ 关闭 Python 编译区';
-        });
-
-        toggleCanvas.addEventListener('click', () => {
-            const canvas = document.getElementById('__canvas__');
-            if (canvas.style.display === 'none') {
-                canvas.style.display = 'block';
-                toggleCanvas.textContent = '🧩 隐藏绘图区';
-            } else {
-                canvas.style.display = 'none';
-                toggleCanvas.textContent = '🧩 显示绘图区';
-            }
-        });
-
-        runPython.addEventListener('click', async () => {
-            const code = document.getElementById('pythonCode').value;
-            outputEl.textContent = '';
-            turtleContainer.innerHTML = '<canvas id="__canvas__" width="480" height="360" style="background:#fff;border-radius:8px;"></canvas>';
-            const canvas = document.getElementById('__canvas__');
-            if (toggleCanvas.textContent.includes('隐藏')) canvas.style.display = 'block';
-            const outf = t => outputEl.textContent += t + '\n';
-            Sk.configure({
-                output: outf,
-                read: x => Sk.builtinFiles.files[x],
-                __future__: Sk.python3,
-                turtle: { canvasID: "__canvas__", width: 480, height: 360 }
-            });
-            try {
-                await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true));
-                if (savePythonResult.checked) {
-                    const name = document.getElementById('cName').value.trim() || 'Python 用户';
-                    const text = "```\n" + code + "\n```\n\n**运行结果：**\n```\n" + outputEl.textContent + "\n```";
-                    await addDoc(collection(db, "comments"), { name, text, fileUrl: "", fileName: "", ts: serverTimestamp() });
-                    renderComments();
-                }
-            } catch (err) {
-                outputEl.textContent += "\n⚠️ " + err.toString();
-            }
+            renderComments(); showStorageUsage();
         });
     </script>
 
