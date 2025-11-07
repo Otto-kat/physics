@@ -151,7 +151,6 @@
             font-family: monospace;
         }
 
-        /* ✅ 优化：存储信息更新闪烁效果 */
         @keyframes blink {
             0% {
                 opacity: 1;
@@ -168,6 +167,17 @@
 
         .updating {
             animation: blink 1s ease-in-out 2;
+        }
+
+        /* ✅ Tesla quote 样式 */
+        footer {
+            text-align: center;
+            font-size: 13px;
+            color: #94a3b8;
+            margin-top: 30px;
+            margin-bottom: 30px;
+            font-style: italic;
+            letter-spacing: 0.3px;
         }
     </style>
 </head>
@@ -195,7 +205,7 @@
 
         <div style="margin-top:14px;"><div class="small">Markdown 实时预览</div><div id="markdownPreview">*Markdown 实时预览 / Live Preview*</div></div>
 
-        <!-- ✅ Python 编译区 -->
+        <!-- ✅ Python 区 -->
         <div style="margin-top:16px;">
             <button id="togglePython">🐍 打开 Python 编译区</button>
             <div id="pythonArea">
@@ -206,11 +216,9 @@
                 </div>
                 <div style="margin-top:8px;">
                     <button id="runPython">▶️ 运行代码</button>
-                    <!-- ✅ 新增按钮：控制是否显示绘图区 -->
                     <button id="toggleCanvas" style="margin-left:8px;background:#475569;">🧩 显示绘图区</button>
                 </div>
                 <pre id="pythonOutput">（运行结果将在此显示）</pre>
-
                 <div id="turtleContainer" style="margin-top:10px;text-align:center;">
                     <canvas id="__canvas__" width="480" height="360" style="background:#fff;border-radius:8px;display:none;"></canvas>
                 </div>
@@ -222,7 +230,12 @@
         <div class="small" id="storageUsage" style="margin-top:16px;">💾 加载中...</div>
     </div>
 
-    <!-- ✅ 主逻辑 -->
+    <!-- ✅ Tesla 名言 -->
+    <footer>
+        “If you want to find the secrets of the universe, think in terms of energy, frequency and vibration.” — N. Tesla
+    </footer>
+
+    <!-- ✅ 主逻辑（Firebase + Supabase + Python） -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
@@ -256,6 +269,7 @@
             zh: { title: "自然窥探者 · Firebase + Supabase 上传测试", desc: "上传 PDF 或图片评论，全网可见", submit: "提交评论", switch: "🌐 English" },
             en: { title: "Natural Observer · Firebase + Supabase Upload Demo", desc: "Upload PDFs or images — visible worldwide", submit: "Post Comment", switch: "🌐 中文" }
         };
+
         langToggle.addEventListener('click', () => {
             lang = lang === 'zh' ? 'en' : 'zh';
             const t = texts[lang];
@@ -268,10 +282,9 @@
 
         textArea.addEventListener('input', async () => {
             previewDiv.innerHTML = marked.parse(textArea.value || "*Markdown 实时预览 / Live Preview*");
-            if (window.MathJax && MathJax.typesetPromise) { await MathJax.typesetPromise([previewDiv]); }
+            if (window.MathJax && MathJax.typesetPromise) await MathJax.typesetPromise([previewDiv]);
         });
 
-        /* ✅ 优化版存储信息显示函数 */
         let updating = false;
         async function showStorageUsage(force = false) {
             if (updating) return;
@@ -287,7 +300,7 @@
                 const remainMB = (totalMB - usedMB).toFixed(2);
                 const html = `💾 ${lang === 'zh' ? '当前使用' : 'Used'}：<b>${usedMB} MB</b> / ${totalMB} MB （${lang === 'zh' ? '剩余' : 'Remaining'} <b>${remainMB} MB</b>）`;
                 usageEl.innerHTML = html;
-            } catch (e) {
+            } catch {
                 usageEl.textContent = "⚠️ Storage info unavailable";
             }
             usageEl.classList.remove('updating');
@@ -306,11 +319,11 @@
                 const el = document.createElement('div');
                 el.className = "comment";
                 el.innerHTML = `<div style='display:flex;justify-content:space-between;'>
-                  <b>${c.name || '访客'}</b>
-                  <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span>
-                </div>
-                <div>${marked.parse(c.text || "")}</div>
-                ${c.fileUrl ? `<a class='file-link' href='${c.fileUrl}' target='_blank'>📎 ${c.fileName}</a>` : ''}`;
+                      <b>${c.name || '访客'}</b>
+                      <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span>
+                    </div>
+                    <div>${marked.parse(c.text || "")}</div>
+                    ${c.fileUrl ? `<a class='file-link' href='${c.fileUrl}' target='_blank'>📎 ${c.fileName}</a>` : ''}`;
                 commentsContainer.appendChild(el);
                 if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([el]);
             });
@@ -341,7 +354,6 @@
 
         renderComments();
 
-        /* ✅ Python + Turtle + 控制绘图区显示 */
         const togglePython = document.getElementById('togglePython');
         const pythonArea = document.getElementById('pythonArea');
         const runPython = document.getElementById('runPython');
@@ -370,12 +382,10 @@
         runPython.addEventListener('click', async () => {
             const code = document.getElementById('pythonCode').value;
             outputEl.textContent = '';
-
             turtleContainer.innerHTML = '<canvas id="__canvas__" width="480" height="360" style="background:#fff;border-radius:8px;"></canvas>';
             const canvas = document.getElementById('__canvas__');
-            if (toggleCanvas.textContent.includes('隐藏')) canvas.style.display = 'block'; // 保持同步
-
-            const outf = text => outputEl.textContent += text + '\n';
+            if (toggleCanvas.textContent.includes('隐藏')) canvas.style.display = 'block';
+            const outf = t => outputEl.textContent += t + '\n';
             Sk.configure({
                 output: outf,
                 read: x => Sk.builtinFiles.files[x],
