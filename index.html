@@ -4,27 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>自然窥探者 · Firebase + Supabase 上传测试</title>
-
-    <!-- 粒子背景 -->
     <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
-
-    <!-- MathJax 配置（支持 $...$ 与 $$...$$） -->
-    <script>
-        window.MathJax = {
-            tex: {
-                inlineMath: [['\\(', '\\)'], ['$', '$']],
-                displayMath: [['$$', '$$'], ['\\[', '\\]']]
-            },
-            options: {
-                // 不在这些标签内渲染
-                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
-            }
-        };
-    </script>
-    <script id="MathJax-script" async
-            src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
-    </script>
-
     <style>
         :root {
             --bg1: #101522;
@@ -86,7 +66,7 @@
         }
 
         .comment {
-            border-top: 1px solid rgba(255,255,255,0.15);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
             margin-top: 8px;
             padding-top: 8px;
         }
@@ -142,12 +122,6 @@
                 border-color: var(--accent);
                 background: rgba(255,255,255,0.15);
             }
-
-        /* Markdown preview 内的公式适当换行显示 */
-        #markdownPreview {
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
     </style>
 </head>
 <body>
@@ -163,9 +137,7 @@
 
         <input id="cName" type="text" placeholder="名字 (必填)" style="margin-top:6px;"><br>
         <input id="cEmail" type="email" placeholder="邮箱 (可选)" style="margin-top:6px;"><br>
-
-        <!-- 这里是 Markdown 编辑区（用户可写 LaTeX） -->
-        <textarea id="cText" placeholder="评论内容 (支持 Markdown & LaTeX，例如 $\\psi(r)$)" style="min-height:120px;margin-top:6px;"></textarea><br>
+        <textarea id="cText" placeholder="评论内容 (支持 Markdown)" style="min-height:80px;margin-top:6px;"></textarea><br>
         <input id="cFile" type="file" accept="application/pdf,image/png,image/jpeg" style="margin-top:6px;"><br>
 
         <div id="markdownPreview" style="
@@ -199,7 +171,7 @@
         import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
         import { marked } from "https://cdn.jsdelivr.net/npm/marked@12.0.2/lib/marked.esm.js";
 
-        // ---------- Firebase & Supabase 配置（按需替换） ----------
+        // Firebase 配置
         const firebaseConfig = {
             apiKey: "AIzaSyCPDiyZtMUe_RNudnvXmaZGUfwhJjKVXOs",
             authDomain: "my-light-site.firebaseapp.com",
@@ -209,13 +181,12 @@
             appId: "1:870998893975:web:ce4b1d412168e07b5390d2"
         };
 
+        // Supabase 配置
         const supabaseUrl = "https://isnamqcyzimvlmaiczeu.supabase.co";
         const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzbmFtcWN5emltdmxtYWljemV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTQwODEsImV4cCI6MjA3ODAzMDA4MX0.WcwFDqu-22xMWanw3mWqrIN2M1llNBI-bDrO3QkmlMI";
-
         const supabase = createClient(supabaseUrl, supabaseKey);
         const db = getFirestore(initializeApp(firebaseConfig));
 
-        // DOM
         const addBtn = document.getElementById('addComment');
         const commentsContainer = document.getElementById('commentsContainer');
         const statusEl = document.getElementById('uploadStatus');
@@ -224,27 +195,17 @@
         const textArea = document.getElementById('cText');
         const previewDiv = document.getElementById('markdownPreview');
 
-        // marked 安全 / 渲染选项（可按需调整）
-        marked.setOptions({
-            breaks: true,
-            gfm: true
-        });
-
-        // ---------- Markdown 实时预览（并触发 MathJax 渲染） ----------
-        textArea.addEventListener('input', async () => {
+        // 实时 Markdown 预览
+        textArea.addEventListener('input', () => {
             const raw = textArea.value;
             previewDiv.innerHTML = marked.parse(raw || "*Markdown 实时预览 / Live Preview*");
-            // 等 MathJax 加载完成后调用 typesetPromise 渲染 LaTeX
-            if (window.MathJax && MathJax.typesetPromise) {
-                try { await MathJax.typesetPromise([previewDiv]); } catch (e) { console.warn('MathJax render error', e); }
-            }
         });
 
-        // ---------- 多语言文案 ----------
+        // 中英文切换
         let lang = 'zh';
         const texts = {
-            zh: { title: "自然窥探者 · Firebase + Supabase 上传测试", desc: "上传 PDF 或图片评论，全网可见", submit: "提交评论", name: "名字 (必填)", email: "邮箱 (可选)", comment: "评论内容 (支持 Markdown & LaTeX)", switch: "🌐 English" },
-            en: { title: "Natural Observer · Firebase + Supabase Upload Demo", desc: "Upload PDFs or images — visible to everyone worldwide.", submit: "Post Comment", name: "Name (required)", email: "Email (optional)", comment: "Comment (Markdown & LaTeX supported)", switch: "🌐 中文" }
+            zh: { title: "自然窥探者 · Firebase + Supabase 上传测试", desc: "上传 PDF 或图片评论，全网可见", submit: "提交评论", name: "名字 (必填)", email: "邮箱 (可选)", comment: "评论内容 (支持 Markdown)", switch: "🌐 English" },
+            en: { title: "Natural Observer · Firebase + Supabase Upload Demo", desc: "Upload PDFs or images — visible to everyone worldwide.", submit: "Post Comment", name: "Name (required)", email: "Email (optional)", comment: "Comment (Markdown supported)", switch: "🌐 中文" }
         };
 
         langToggle.addEventListener('click', () => {
@@ -259,13 +220,12 @@
             langToggle.textContent = t.switch;
         });
 
-        // ---------- 显示 Supabase 存储使用情况 ----------
+        // 显示 Supabase 容量使用
         async function showStorageUsage() {
             try {
                 let totalBytes = 0;
-                const { data, error } = await supabase.storage.from('p').list('', { limit: 1000 });
+                const { data, error } = await supabase.storage.from('p').list('uploads', { limit: 1000 });
                 if (error) throw error;
-                // 如果你的上传文件在 uploads/ 子目录，请改为 list('uploads', {limit:1000})
                 for (const file of data) if (file.metadata?.size) totalBytes += Number(file.metadata.size);
 
                 const usedMB = (totalBytes / (1024 * 1024)).toFixed(2);
@@ -284,13 +244,12 @@
                 <div style="width:${percent}%;background:${color};height:8px;"></div>
               </div>
             `;
-            } catch (e) {
+            } catch {
                 usageEl.textContent = "⚠️ Storage info unavailable";
-                console.error(e);
             }
         }
 
-        // ---------- 渲染评论（从 Firestore）并让 MathJax 渲染公式 ----------
+        // 渲染评论
         async function renderComments() {
             commentsContainer.innerHTML = "<div class='small'>加载中...</div>";
             const q = query(collection(db, "comments"), orderBy("ts", "desc"));
@@ -300,24 +259,18 @@
                 const c = doc.data();
                 const el = document.createElement('div');
                 el.className = "comment";
-                // 使用 marked 转换 Markdown（包含 LaTeX）
-                const htmlContent = marked.parse(c.text || "");
                 el.innerHTML = `
               <div><strong>${c.name || '访客 / Guest'}</strong>
               <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span></div>
-              <div style="margin-top:6px;">${htmlContent}</div>
+              <div style="margin-top:4px;">${marked.parse(c.text || "")}</div>
               ${c.fileUrl ? `<a class="file-link" href="${c.fileUrl}" target="_blank">📎 ${c.fileName}</a>` : ''}
             `;
                 commentsContainer.appendChild(el);
-                // 对刚插入的评论元素执行 MathJax 渲染
-                if (window.MathJax && MathJax.typesetPromise) {
-                    MathJax.typesetPromise([el]).catch((err) => console.warn('MathJax render failed', err));
-                }
             });
             if (!snap.size) commentsContainer.innerHTML = "<div class='small muted'>暂无评论 / No comments</div>";
         }
 
-        // ---------- 上传并保存评论（包含文件上传到 Supabase） ----------
+        // 上传 + 提交评论
         addBtn.addEventListener('click', async () => {
             const name = document.getElementById('cName').value.trim();
             const email = document.getElementById('cEmail').value.trim();
@@ -334,37 +287,23 @@
                 const safeName = encodeURIComponent(file.name.replace(/[^\w.\-]/g, '_'));
                 const filePath = `uploads/${Date.now()}_${safeName}`;
                 const { error } = await supabase.storage.from('p').upload(filePath, file);
-                if (!error) {
-                    const { data } = supabase.storage.from('p').getPublicUrl(filePath);
-                    fileUrl = data.publicUrl;
-                } else {
-                    console.error('Supabase upload error', error);
-                }
+                if (!error) fileUrl = supabase.storage.from('p').getPublicUrl(filePath).data.publicUrl;
             }
 
-            try {
-                await addDoc(collection(db, "comments"), { name, email, text, fileUrl, fileName, ts: serverTimestamp() });
-                statusEl.textContent = lang === 'zh' ? "✅ 已上传并发布" : "✅ Uploaded successfully";
-                // 清空输入
-                fileInput.value = "";
-                document.getElementById('cText').value = "";
-                previewDiv.innerHTML = "*Markdown 实时预览 / Live Preview*";
-                // 刷新
-                renderComments();
-                showStorageUsage();
-            } catch (e) {
-                console.error(e);
-                statusEl.textContent = "保存失败";
-            }
+            await addDoc(collection(db, "comments"), { name, email, text, fileUrl, fileName, ts: serverTimestamp() });
+            statusEl.textContent = lang === 'zh' ? "✅ 已上传并发布" : "✅ Uploaded successfully";
+            renderComments();
+            showStorageUsage();
+            fileInput.value = "";
+            document.getElementById('cText').value = "";
+            previewDiv.innerHTML = "*Markdown 实时预览 / Live Preview*";
         });
 
-        // 初始加载
         renderComments();
         showStorageUsage();
     </script>
 
     <script>
-        // 粒子背景初始化（简单）
         particlesJS("particles-js", {
             particles: {
                 number: { value: 90, density: { enable: true, value_area: 800 } },
