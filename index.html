@@ -176,19 +176,20 @@
 
         <div style="margin-top:14px;"><div class="small">Markdown 实时预览</div><div id="markdownPreview">*Markdown 实时预览 / Live Preview*</div></div>
 
-        <!-- ✅ Python 区域 -->
+        <!-- ✅ Python 编译区 -->
         <div style="margin-top:16px;">
             <button id="togglePython">🐍 打开 Python 编译区</button>
             <div id="pythonArea">
                 <div class="small">在下方编写 Python 代码，可直接运行：</div>
                 <textarea id="pythonCode" placeholder="print('Hello, Python!')"></textarea>
                 <div style="margin-top:8px;">
-                    <label class="small">
-                        <input type="checkbox" id="savePythonResult"> 将运行结果保留到评论区
-                    </label>
+                    <label class="small"><input type="checkbox" id="savePythonResult"> 将运行结果保留到评论区</label>
                 </div>
                 <div style="margin-top:8px;"><button id="runPython">▶️ 运行代码</button></div>
                 <pre id="pythonOutput">（运行结果将在此显示）</pre>
+
+                <!-- ✅ 🐢 Turtle 绘图区 -->
+                <div id="__canvas__" style="background:#fff;border-radius:8px;margin-top:10px;width:480px;height:360px;display:none;"></div>
             </div>
         </div>
 
@@ -197,11 +198,10 @@
         <div class="small" id="storageUsage" style="margin-top:16px;">💾 加载中...</div>
     </div>
 
-    <!-- ✅ 全部逻辑代码 -->
+    <!-- ✅ 主逻辑 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp }
-            from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
         import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
         import { marked } from "https://cdn.jsdelivr.net/npm/marked@12.0.2/lib/marked.esm.js";
 
@@ -274,11 +274,11 @@
                     const c = doc.data(); const el = document.createElement('div');
                     el.className = "comment";
                     el.innerHTML = `<div style='display:flex;justify-content:space-between;'>
-                <b>${c.name || '访客'}</b>
-                <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span>
-              </div>
-              <div>${marked.parse(c.text || "")}</div>
-              ${c.fileUrl ? `<a class='file-link' href='${c.fileUrl}' target='_blank'>📎 ${c.fileName}</a>` : ''}`;
+         <b>${c.name || '访客'}</b>
+         <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span>
+       </div>
+       <div>${marked.parse(c.text || "")}</div>
+       ${c.fileUrl ? `<a class='file-link' href='${c.fileUrl}' target='_blank'>📎 ${c.fileName}</a>` : ''}`;
                     commentsContainer.appendChild(el);
                     if (window.MathJax && MathJax.typesetPromise) { MathJax.typesetPromise([el]); }
                 });
@@ -312,12 +312,13 @@
 
         renderComments(); showStorageUsage();
 
-        /* ✅ Python 功能逻辑（含保存结果选项） */
+        /* ✅ Python 功能逻辑（含 turtle 支持） */
         const togglePython = document.getElementById('togglePython');
         const pythonArea = document.getElementById('pythonArea');
         const runPython = document.getElementById('runPython');
         const outputEl = document.getElementById('pythonOutput');
         const savePythonResult = document.getElementById('savePythonResult');
+        const canvas = document.getElementById('__canvas__');
 
         togglePython.addEventListener('click', () => {
             pythonArea.style.display = pythonArea.style.display === 'none' ? 'block' : 'none';
@@ -327,8 +328,15 @@
         runPython.addEventListener('click', async () => {
             const code = document.getElementById('pythonCode').value;
             outputEl.textContent = '';
+            canvas.style.display = 'block';
+            canvas.innerHTML = '';
             const outf = text => outputEl.textContent += text + '\n';
-            Sk.configure({ output: outf, read: x => Sk.builtinFiles.files[x] });
+            Sk.configure({
+                output: outf,
+                read: x => Sk.builtinFiles.files[x],
+                __future__: Sk.python3,
+                turtle: { canvasID: "__canvas__", width: 480, height: 360 }
+            });
             try {
                 await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true));
                 if (savePythonResult.checked) {
@@ -337,9 +345,7 @@
                     await addDoc(collection(db, "comments"), { name, text, fileUrl: "", fileName: "", ts: serverTimestamp() });
                     renderComments();
                 }
-            } catch (err) {
-                outputEl.textContent += "\n⚠️ " + err.toString();
-            }
+            } catch (err) { outputEl.textContent += "\n⚠️ " + err.toString(); }
         });
     </script>
 
@@ -351,10 +357,7 @@
                 line_linked: { enable: true, distance: 120, color: "#60a5fa", opacity: 0.2, width: 1 },
                 move: { enable: true, speed: 1.2, out_mode: "bounce" }
             },
-            interactivity: {
-                events: { onhover: { enable: true, mode: "repulse" } },
-                modes: { repulse: { distance: 80 } }
-            },
+            interactivity: { events: { onhover: { enable: true, mode: "repulse" } }, modes: { repulse: { distance: 80 } } },
             retina_detect: true
         });
     </script>
