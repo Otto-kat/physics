@@ -7,13 +7,8 @@
     <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
     <script>
         window.MathJax = {
-            tex: {
-                inlineMath: [['\\(', '\\)'], ['$', '$']],
-                displayMath: [['$$', '$$'], ['\\[', '\\]']]
-            },
-            options: {
-                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
-            }
+            tex: { inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+            options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
         };
     </script>
     <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -95,6 +90,7 @@
 
         textarea {
             font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,"Courier New",monospace;
+            resize: vertical;
         }
 
             input:focus, textarea:focus {
@@ -129,6 +125,24 @@
             color: var(--muted);
             cursor: pointer;
         }
+
+        #pythonArea {
+            display: none;
+            margin-top: 16px;
+        }
+
+        #pythonCode {
+            min-height: 120px;
+        }
+
+        #pythonOutput {
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 8px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
@@ -147,12 +161,23 @@
         <label class="small" for="cEmail">邮箱 (可选)</label>
         <input id="cEmail" placeholder="邮箱 (可选)">
         <label class="small" for="cText">评论内容 (支持 Markdown + LaTeX)</label>
-        <textarea id="cText" style="min-height:140px;" placeholder="输入 Markdown，可包含 $E=mc^2$ 或 $$\int_0^1 x dx$$"></textarea>
+        <textarea id="cText" style="min-height:140px;" placeholder="输入 Markdown，可包含 $E=mc^2$ 或 $$\\int_0^1 x dx$$"></textarea>
         <label class="small" for="cFile">上传文件（PDF / PNG / JPG）</label>
         <input id="cFile" type="file" accept="application/pdf,image/png,image/jpeg">
         <div style="margin-top:10px;"><button id="addComment">提交评论</button><span id="uploadStatus" style="margin-left:12px;color:var(--muted)"></span></div>
 
         <div style="margin-top:14px;"><div class="small">Markdown 实时预览</div><div id="markdownPreview">*Markdown 实时预览 / Live Preview*</div></div>
+
+        <!-- ✅ Python 区域 -->
+        <div style="margin-top:16px;">
+            <button id="togglePython">🐍 打开 Python 编译区</button>
+            <div id="pythonArea">
+                <div class="small">在下方编写 Python 代码，可直接运行：</div>
+                <textarea id="pythonCode" placeholder="print('Hello, Python!')"></textarea>
+                <div style="margin-top:8px;"><button id="runPython">▶️ 运行代码</button></div>
+                <pre id="pythonOutput">（运行结果将在此显示）</pre>
+            </div>
+        </div>
 
         <h3 style="margin-top:18px;">已有评论</h3>
         <div id="commentsContainer"></div>
@@ -216,14 +241,11 @@
                 }
                 const { data, error } = await supabase.storage.from('p').list('', { limit: 1000 });
                 if (error) throw error;
-                let total = 0;
-                for (const f of data) if (f.metadata?.size) total += Number(f.metadata.size);
+                let total = 0; for (const f of data) if (f.metadata?.size) total += Number(f.metadata.size);
                 const usedMB = (total / (1024 * 1024)).toFixed(2);
-                const totalMB = 1024;
-                const remainMB = (totalMB - usedMB).toFixed(2);
+                const totalMB = 1024; const remainMB = (totalMB - usedMB).toFixed(2);
                 const html = `💾 ${lang === 'zh' ? '当前使用' : 'Used'}：<b>${usedMB} MB</b> / ${totalMB} MB （${lang === 'zh' ? '剩余' : 'Remaining'} <b>${remainMB} MB</b>）`;
-                usageEl.innerHTML = html;
-                localStorage.setItem(cacheKey, html);
+                usageEl.innerHTML = html; localStorage.setItem(cacheKey, html);
             } catch (e) { usageEl.textContent = "⚠️ Storage info unavailable"; console.error(e); }
         }
         setInterval(() => showStorageUsage(true), 30000);
@@ -235,12 +257,11 @@
                 const snap = await getDocs(q);
                 commentsContainer.innerHTML = "";
                 snap.forEach(doc => {
-                    const c = doc.data();
-                    const el = document.createElement('div');
+                    const c = doc.data(); const el = document.createElement('div');
                     el.className = "comment";
-                    el.innerHTML = `<div style="display:flex;justify-content:space-between;">
+                    el.innerHTML = `<div style='display:flex;justify-content:space-between;'>
             <b>${c.name || '访客'}</b>
-            <span class="small">${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span>
+            <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span>
           </div>
           <div>${marked.parse(c.text || "")}</div>
           ${c.fileUrl ? `<a class='file-link' href='${c.fileUrl}' target='_blank'>📎 ${c.fileName}</a>` : ''}`;
@@ -276,6 +297,24 @@
         });
 
         renderComments(); showStorageUsage();
+
+        /* ✅ Python 功能逻辑 */
+        const togglePython = document.getElementById('togglePython');
+        const pythonArea = document.getElementById('pythonArea');
+        const runPython = document.getElementById('runPython');
+        const outputEl = document.getElementById('pythonOutput');
+        togglePython.addEventListener('click', () => {
+            pythonArea.style.display = pythonArea.style.display === 'none' ? 'block' : 'none';
+            togglePython.textContent = pythonArea.style.display === 'none' ? '🐍 打开 Python 编译区' : '❌ 关闭 Python 编译区';
+        });
+        runPython.addEventListener('click', () => {
+            const code = document.getElementById('pythonCode').value;
+            outputEl.textContent = '';
+            const outf = text => outputEl.textContent += text + '\n';
+            Sk.configure({ output: outf, read: x => Sk.builtinFiles.files[x] });
+            Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true))
+                .catch(err => { outputEl.textContent += "\n⚠️ " + err.toString(); });
+        });
     </script>
 
     <script>
