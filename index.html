@@ -123,9 +123,9 @@
             }
     </style>
 </head>
+
 <body>
     <div id="particles-js"></div>
-
     <div class="card">
         <div>
             <h2 id="title">自然窥探者 · Firebase + Supabase 上传测试</h2>
@@ -140,12 +140,8 @@
         <input id="cFile" type="file" accept="application/pdf,image/png,image/jpeg" style="margin-top:6px;"><br>
 
         <div id="markdownPreview" style="background: rgba(255,255,255,0.06);
-      border-radius: 8px;
-      padding: 10px;
-      margin-top: 8px;
-      font-size: 14px;
-      color: #f8fafc;
-      border: 1px solid rgba(255,255,255,0.1);">
+      border-radius: 8px; padding: 10px; margin-top: 8px;
+      font-size: 14px; color: #f8fafc; border: 1px solid rgba(255,255,255,0.1);">
             *Markdown + LaTeX 实时预览 / Live Preview*
         </div>
 
@@ -163,7 +159,7 @@
         </div>
     </div>
 
-    <!-- 依赖库 -->
+    <!-- 脚本区 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp }
@@ -172,10 +168,10 @@
         import { marked } from "https://cdn.jsdelivr.net/npm/marked@12.0.2/lib/marked.esm.js";
         import DOMPurify from "https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.es.min.js";
 
-        // LaTeX 渲染
         import "https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js";
         import renderMathInElement from "https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.mjs";
 
+        // 🔥 Firebase 配置
         const firebaseConfig = {
             apiKey: "AIzaSyCPDiyZtMUe_RNudnvXmaZGUfwhJjKVXOs",
             authDomain: "my-light-site.firebaseapp.com",
@@ -184,11 +180,11 @@
             messagingSenderId: "870998893975",
             appId: "1:870998893975:web:ce4b1d412168e07b5390d2"
         };
+        const db = getFirestore(initializeApp(firebaseConfig));
 
+        // 💾 Supabase 初始化
         const supabaseUrl = "https://isnamqcyzimvlmaiczeu.supabase.co";
         const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzbmFtcWN5emltdmxtYWljemV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTQwODEsImV4cCI6MjA3ODAzMDA4MX0.WcwFDqu-22xMWanw3mWqrIN2M1llNBI-bDrO3QkmlMI";
-
-        const db = getFirestore(initializeApp(firebaseConfig));
         const supabase = createClient(supabaseUrl, supabaseKey);
 
         const cText = document.getElementById("cText");
@@ -204,19 +200,22 @@
             renderMathInElement(preview, { delimiters: [{ left: "$$", right: "$$", display: true }, { left: "$", right: "$", display: false }] });
         });
 
+        // 📊 存储用量显示
         async function showStorageUsage() {
             try {
-                const { data } = await supabase.storage.from('p').list('uploads', { limit: 1000 });
+                const { data, error } = await supabase.storage.from("p").list("uploads", { limit: 1000 });
+                if (error) throw error;
                 let totalBytes = 0;
                 for (const f of data || []) totalBytes += f.metadata?.size || 0;
                 const usedMB = (totalBytes / 1024 / 1024).toFixed(2);
                 const remainMB = (1024 - usedMB).toFixed(2);
                 usageEl.innerHTML = `💾 当前使用 <b>${usedMB} MB</b> / 1024 MB （剩余 <b>${remainMB} MB</b>）`;
-            } catch {
+            } catch (err) {
                 usageEl.textContent = "⚠️ 无法获取存储状态";
             }
         }
 
+        // 💬 渲染评论
         async function renderComments() {
             commentsContainer.innerHTML = "<div class='small'>加载中...</div>";
             const q = query(collection(db, "comments"), orderBy("ts", "desc"));
@@ -236,28 +235,38 @@
             });
         }
 
+        // 🚀 提交评论 + 文件上传
         document.getElementById("addComment").addEventListener("click", async () => {
             const name = document.getElementById("cName").value.trim();
             const text = cText.value.trim();
             const file = document.getElementById("cFile").files[0];
             if (!name || !text) return alert("请填写名字和评论内容");
 
-            statusEl.textContent = "上传中...";
+            statusEl.textContent = "⏳ 正在上传...";
             let fileUrl = "", fileName = "";
 
-            if (file) {
-                fileName = file.name;
-                const path = `uploads/${Date.now()}_${encodeURIComponent(file.name)}`;
-                const { error } = await supabase.storage.from("p").upload(path, file);
-                if (!error) fileUrl = supabase.storage.from("p").getPublicUrl(path).data.publicUrl;
-            }
+            try {
+                if (file) {
+                    fileName = file.name;
+                    const uniquePath = `uploads/${Date.now()}_${Math.random().toString(36).slice(2)}_${encodeURIComponent(file.name)}`;
+                    const { error: uploadError } = await supabase.storage.from("p").upload(uniquePath, file);
+                    if (uploadError) throw uploadError;
+                    const { data } = supabase.storage.from("p").getPublicUrl(uniquePath);
+                    fileUrl = data.publicUrl;
+                }
 
-            await addDoc(collection(db, "comments"), { name, text, fileUrl, fileName, ts: serverTimestamp() });
-            statusEl.textContent = "✅ 已上传";
-            document.getElementById("cText").value = "";
-            preview.innerHTML = "*Markdown + LaTeX 实时预览*";
-            showStorageUsage();
-            renderComments();
+                await addDoc(collection(db, "comments"), { name, text, fileUrl, fileName, ts: serverTimestamp() });
+
+                statusEl.textContent = "✅ 已上传成功！";
+                cText.value = "";
+                preview.innerHTML = "*Markdown + LaTeX 实时预览*";
+                document.getElementById("cFile").value = "";
+                await showStorageUsage();
+                await renderComments();
+            } catch (err) {
+                console.error(err);
+                statusEl.textContent = "❌ 上传失败，请重试";
+            }
         });
 
         showStorageUsage();
