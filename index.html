@@ -151,10 +151,15 @@
             font-family: monospace;
         }
 
+        /* 容器样式：Skulpt 会在这个 div 内创建实际的 canvas */
         #__canvas__ {
+            width: 480px;
+            height: 360px;
             background: #fff;
             border-radius: 8px;
             margin-top: 8px;
+            display: none;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.15);
         }
     </style>
 </head>
@@ -194,10 +199,11 @@
                 <div style="margin-top:8px;"><button id="runPython">▶️ 运行代码</button></div>
                 <pre id="pythonOutput">（运行结果将在此显示）</pre>
 
-                <!-- ✅ 🐢 Turtle 绘图区 -->
+                <!-- ✅ Turtle 容器（必须是 div，Skulpt 会在里面生成 canvas） -->
                 <div id="turtleContainer" style="margin-top:10px;text-align:center;">
                     <button id="toggleTurtle" style="margin-bottom:6px;">🐢 显示绘图区</button><br>
-                    <canvas id="__canvas__" width="480" height="360" style="display:none;"></canvas>
+                    <!-- 初始放一个空的 div，让脚本能找到并替换 / Skulpt 也会在这里创建实际 canvas -->
+                    <div id="__canvas__" style="display:none;"></div>
                 </div>
             </div>
         </div>
@@ -318,19 +324,20 @@
 
         renderComments(); showStorageUsage();
 
-        /* ✅ Python + Turtle 改进 */
+        /* ✅ Python + Turtle 改进（修复 Skulpt firstChild/null 问题） */
         const togglePython = document.getElementById('togglePython');
         const pythonArea = document.getElementById('pythonArea');
         const runPython = document.getElementById('runPython');
         const outputEl = document.getElementById('pythonOutput');
         const savePythonResult = document.getElementById('savePythonResult');
         const turtleBtn = document.getElementById('toggleTurtle');
-        const canvas = document.getElementById('__canvas__');
+        const turtleContainer = document.getElementById('turtleContainer');
 
         let turtleVisible = false;
         turtleBtn.addEventListener('click', () => {
             turtleVisible = !turtleVisible;
-            canvas.style.display = turtleVisible ? 'block' : 'none';
+            const canvasDiv = document.getElementById('__canvas__');
+            if (canvasDiv) canvasDiv.style.display = turtleVisible ? 'block' : 'none';
             turtleBtn.textContent = turtleVisible ? '❌ 隐藏绘图区' : '🐢 显示绘图区';
         });
 
@@ -343,19 +350,25 @@
             const code = document.getElementById('pythonCode').value;
             outputEl.textContent = '';
 
-            // ✅ 清理并重建 canvas（防止 Skulpt turtle 绑定错误）
-            const container = document.getElementById('turtleContainer');
-            container.querySelectorAll('canvas').forEach(c => c.remove());
-            const newCanvas = document.createElement('canvas');
-            newCanvas.id = '__canvas__';
-            newCanvas.width = 480;
-            newCanvas.height = 360;
-            newCanvas.style.background = '#fff';
-            newCanvas.style.borderRadius = '8px';
-            newCanvas.style.display = turtleVisible ? 'block' : 'none';
-            container.appendChild(newCanvas);
+            // 重建容器 div#__canvas__（Skulpt turtle 期望一个容器 div）
+            // 先移除旧的 __canvas__（如果存在），然后创建一个新的 div#__canvas__
+            const old = document.getElementById('__canvas__');
+            if (old) old.remove();
+            const newDiv = document.createElement('div');
+            newDiv.id = '__canvas__';
+            newDiv.style.width = '480px';
+            newDiv.style.height = '360px';
+            newDiv.style.background = '#fff';
+            newDiv.style.borderRadius = '8px';
+            newDiv.style.marginTop = '8px';
+            newDiv.style.display = turtleVisible ? 'block' : 'none';
+            // 将它插回 turtleContainer（放在 toggle 按钮后面）
+            turtleContainer.appendChild(newDiv);
 
+            // 输出函数
             const outf = text => outputEl.textContent += text + '\n';
+
+            // 配置 Skulpt（turtle: 指向容器 id）
             Sk.configure({
                 output: outf,
                 read: x => Sk.builtinFiles.files[x],
@@ -364,7 +377,10 @@
             });
 
             try {
+                // 执行用户代码（Skulpt 会在 div#__canvas__ 内创建 canvas 并绘图）
                 await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true));
+
+                // 如果用户选择保存结果到评论区，则把代码和输出加入到 Firestore comments
                 if (savePythonResult.checked) {
                     const name = document.getElementById('cName').value.trim() || 'Python 用户';
                     const text = "```\n" + code + "\n```\n\n**运行结果：**\n```\n" + outputEl.textContent + "\n```";
