@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title id="pageTitle">自然窥探者 · Firebase + Supabase 上传测试</title>
 
-    <!-- 背景粒子 -->
+    <!-- 粒子背景 -->
     <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
 
     <!-- 数学公式 -->
@@ -205,9 +205,7 @@
         <div id="commentsContainer"></div>
     </div>
 
-    <footer id="footer">
-        “If you want to find the secrets of the universe, think in terms of energy, frequency and vibration.” — Nikola Tesla
-    </footer>
+    <footer id="footer">“If you want to find the secrets of the universe, think in terms of energy, frequency and vibration.” — Nikola Tesla</footer>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
@@ -215,7 +213,6 @@
         import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
         import { marked } from "https://cdn.jsdelivr.net/npm/marked@12.0.2/lib/marked.esm.js";
 
-        // ✅ 初始化 Firebase & Supabase
         const firebaseConfig = {
             apiKey: "AIzaSyCPDiyZtMUe_RNudnvXmaZGUfwhJjKVXOs",
             authDomain: "my-light-site.firebaseapp.com",
@@ -231,7 +228,6 @@
         const db = getFirestore(initializeApp(firebaseConfig));
         let currentLang = "zh";
 
-        /* ✅ 渲染评论 */
         async function renderComments() {
             const c = document.getElementById("commentsContainer");
             c.innerHTML = currentLang === "zh" ? "<div class='small'>加载中...</div>" : "<div class='small'>Loading...</div>";
@@ -261,7 +257,6 @@
             }
         }
 
-        /* ✅ 上传评论 */
         addComment.onclick = async () => {
             const name = cName.value.trim();
             const text = cText.value.trim();
@@ -275,24 +270,26 @@
                 if (file) {
                     const safeName = file.name.replace(/[^\w.\-]/g, "_");
                     const path = `uploads/${Date.now()}-${safeName}`;
-                    const { error } = await supabase.storage.from("p").upload(path, file);
+                    const { data, error } = await supabase.storage.from("p").upload(path, file, { upsert: true, cacheControl: "3600" });
                     if (error) throw error;
-                    fileUrl = supabase.storage.from("p").getPublicUrl(path).data.publicUrl;
+                    const { data: pub } = supabase.storage.from("p").getPublicUrl(path);
+                    fileUrl = pub.publicUrl;
                     fileName = file.name;
                 }
+
                 await addDoc(collection(db, "comments"), { name, text, fileUrl, fileName, ts: serverTimestamp() });
                 status.textContent = "✅ 上传成功";
                 cText.value = ""; cFile.value = "";
                 renderComments();
             } catch (e) {
-                console.error(e);
+                console.error("❌ 上传失败：", e);
                 status.textContent = "❌ 上传失败";
             }
         };
 
-        /* ✅ Python */
         togglePython.onclick = () => pythonArea.style.display = pythonArea.style.display === "none" ? "block" : "none";
         toggleTurtle.onclick = () => turtleContainer.style.display = turtleContainer.style.display === "none" ? "block" : "none";
+
         runPython.onclick = async () => {
             const code = pythonCode.value;
             const out = pythonOutput; out.textContent = "";
@@ -309,13 +306,11 @@
             } catch (e) { out.textContent = "⚠️ " + e.toString(); }
         };
 
-        /* ✅ Markdown 实时预览 */
         cText.addEventListener("input", () => {
             markdownPreview.innerHTML = marked.parse(cText.value || "*Markdown 实时预览 / Live Preview*");
             if (window.MathJax?.typesetPromise) MathJax.typesetPromise([markdownPreview]);
         });
 
-        /* ✅ 多语言切换 */
         const texts = {
             zh: { title: "自然窥探者 · Firebase + Supabase 上传测试", desc: "上传 PDF、图片、Excel 等评论，全网可见", langBtn: "🌐 English", comments: "已有评论" },
             en: { title: "Natural Observer · Firebase + Supabase Upload Test", desc: "Upload PDF, images, Excel, or text comments — visible to everyone", langBtn: "🌐 中文", comments: "Comments" }
@@ -331,7 +326,6 @@
             renderComments();
         };
 
-        /* ✅ 初始化加载 */
         window.addEventListener("load", renderComments);
         particlesJS.load('particles-js', 'https://cdn.jsdelivr.net/gh/VincentGarreau/particles.js/demo/particles.json');
     </script>
