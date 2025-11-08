@@ -8,7 +8,7 @@
     <!-- 粒子背景 -->
     <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
 
-    <!-- MathJax 数学公式 -->
+    <!-- MathJax -->
     <script>
         window.MathJax = {
             tex: { inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
@@ -175,7 +175,10 @@
         <textarea id="cText" style="min-height:140px;" placeholder="输入 Markdown，可包含 $E=mc^2$"></textarea>
         <label class="small" for="cFile">上传文件（PDF / PNG / JPG）</label>
         <input id="cFile" type="file" accept="application/pdf,image/png,image/jpeg">
-        <div style="margin-top:10px;"><button id="addComment">提交评论</button><span id="uploadStatus" style="margin-left:12px;color:var(--muted)"></span></div>
+        <div style="margin-top:10px;">
+            <button id="addComment">提交评论</button>
+            <span id="uploadStatus" style="margin-left:12px;color:var(--muted)"></span>
+        </div>
 
         <div style="margin-top:14px;">
             <div class="small">Markdown 实时预览</div>
@@ -229,74 +232,64 @@
         const supabase = createClient(supabaseUrl, supabaseKey);
         const db = getFirestore(initializeApp(firebaseConfig));
 
-        /* ---------- 多语言文本 ---------- */
-        const texts = {
-            zh: { title: "自然窥探者 · Firebase + Supabase 上传测试", desc: "上传 PDF 或图片评论，全网可见", name: "名字 (必填)", email: "邮箱 (可选)", comment: "评论内容 (支持 Markdown + LaTeX)", upload: "上传文件（PDF / PNG / JPG）", preview: "Markdown 实时预览", pythonOpen: "🐍 打开 Python 编译区", pythonClose: "❌ 关闭 Python 编译区", run: "▶️ 运行代码", toggleTurtleShow: "🧩 显示 Turtle 绘图区", toggleTurtleHide: "🧩 隐藏 Turtle 绘图区", footer: "“如果你想揭开宇宙的秘密，就要思考能量、频率和振动。” — 尼古拉·特斯拉", submit: "提交评论", switch: "🌐 English", commentsTitle: "已有评论", noComments: "暂无评论", storageLoading: "💾 加载中..." },
-            en: { title: "Natural Observer · Firebase + Supabase Upload Demo", desc: "Upload PDFs or images — visible worldwide", name: "Name (required)", email: "Email (optional)", comment: "Comment (Markdown + LaTeX supported)", upload: "Upload file (PDF / PNG / JPG)", preview: "Markdown Live Preview", pythonOpen: "🐍 Open Python Area", pythonClose: "❌ Close Python Area", run: "▶️ Run Code", toggleTurtleShow: "🧩 Show Turtle Canvas", toggleTurtleHide: "🧩 Hide Turtle Canvas", footer: "“If you want to find the secrets of the universe, think in terms of energy, frequency and vibration.” — Nikola Tesla", submit: "Post Comment", switch: "🌐 中文", commentsTitle: "Comments", noComments: "No comments yet", storageLoading: "💾 Loading..." }
-        };
-        let lang = 'zh';
+        /* ========== 上传评论逻辑 ========== */
+        document.getElementById("addComment").addEventListener("click", async () => {
+            const name = document.getElementById("cName").value.trim();
+            const text = document.getElementById("cText").value.trim();
+            const file = document.getElementById("cFile").files[0];
+            const status = document.getElementById("uploadStatus");
+            if (!name || !text) { alert("请填写名字和评论内容！"); return; }
 
-        /* ---------- 切换语言函数 ---------- */
-        function updateLanguage() {
-            const t = texts[lang];
-            document.getElementById('title').textContent = t.title;
-            document.getElementById('desc').textContent = t.desc;
-            document.getElementById('addComment').textContent = t.submit;
-            document.getElementById('langToggle').textContent = t.switch;
-            document.querySelector('label[for="cName"]').textContent = t.name;
-            document.querySelector('label[for="cEmail"]').textContent = t.email;
-            document.querySelector('label[for="cText"]').textContent = t.comment;
-            document.querySelector('label[for="cFile"]').textContent = t.upload;
-            document.querySelector('.small').textContent = t.preview;
-            document.querySelector('footer').textContent = t.footer;
-            document.querySelector('h3').textContent = t.commentsTitle;
-            document.getElementById('storageUsage').textContent = t.storageLoading;
-            const pyBtn = document.getElementById('togglePython');
-            pyBtn.textContent = pythonArea.style.display === 'none' ? t.pythonOpen : t.pythonClose;
-            document.getElementById('runPython').textContent = t.run;
-            const turtleBtn = document.getElementById('toggleTurtle');
-            const show = turtleContainer.style.display === 'none';
-            turtleBtn.textContent = show ? t.toggleTurtleShow : t.toggleTurtleHide;
-        }
+            status.textContent = "⏳ 上传中...";
+            let fileUrl = null, fileName = null;
 
-        document.getElementById('langToggle').addEventListener('click', () => {
-            lang = lang === 'zh' ? 'en' : 'zh';
-            updateLanguage();
+            try {
+                if (file) {
+                    const { data, error } = await supabase.storage.from("public").upload(`uploads/${Date.now()}-${file.name}`, file);
+                    if (error) throw error;
+                    const { data: publicUrl } = supabase.storage.from("public").getPublicUrl(data.path);
+                    fileUrl = publicUrl.publicUrl;
+                    fileName = file.name;
+                }
+
+                await addDoc(collection(db, "comments"), {
+                    name, text, fileUrl, fileName, ts: serverTimestamp()
+                });
+                status.textContent = "✅ 上传成功！";
+                document.getElementById("cText").value = "";
+                document.getElementById("cFile").value = "";
+                renderComments();
+            } catch (e) {
+                console.error(e);
+                status.textContent = "❌ 上传失败，请检查配置。";
+            }
         });
 
-        /* ---------- Markdown 实时预览 ---------- */
-        const textArea = document.getElementById('cText');
-        const previewDiv = document.getElementById('markdownPreview');
-        textArea.addEventListener('input', async () => {
-            previewDiv.innerHTML = marked.parse(textArea.value || "*Markdown 实时预览 / Live Preview*");
-            if (window.MathJax && MathJax.typesetPromise) await MathJax.typesetPromise([previewDiv]);
-        });
-
-        /* ---------- Firebase + Supabase 上传 ---------- */
+        /* ========== 渲染评论 ========== */
         async function renderComments() {
-            const commentsContainer = document.getElementById('commentsContainer');
-            commentsContainer.innerHTML = "<div class='small'>加载中...</div>";
+            const container = document.getElementById("commentsContainer");
+            container.innerHTML = "<div class='small'>加载中...</div>";
             const q = query(collection(db, "comments"), orderBy("ts", "desc"));
             const snap = await getDocs(q);
-            commentsContainer.innerHTML = "";
+            container.innerHTML = "";
             snap.forEach(doc => {
                 const c = doc.data();
-                const el = document.createElement('div');
+                const el = document.createElement("div");
                 el.className = "comment";
                 el.innerHTML = `<div style='display:flex;justify-content:space-between;'>
-          <b>${c.name || '访客'}</b>
-          <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span>
+          <b>${c.name || "访客"}</b>
+          <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ""}</span>
         </div>
         <div>${marked.parse(c.text || "")}</div>
-        ${c.fileUrl ? `<a class='file-link' href='${c.fileUrl}' target='_blank'>📎 ${c.fileName}</a>` : ''}`;
-                commentsContainer.appendChild(el);
-                if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([el]);
+        ${c.fileUrl ? `<a class='file-link' href='${c.fileUrl}' target='_blank'>📎 ${c.fileName}</a>` : ""}`;
+                container.appendChild(el);
+                if (window.MathJax?.typesetPromise) MathJax.typesetPromise([el]);
             });
-            if (!snap.size) commentsContainer.innerHTML = `<div class='small'>${texts[lang].noComments}</div>`;
+            if (!snap.size) container.innerHTML = "<div class='small'>暂无评论</div>";
         }
         renderComments();
 
-        /* ---------- Python + Turtle ---------- */
+        /* ========== Python + Turtle ========== */
         const togglePython = document.getElementById('togglePython');
         const pythonArea = document.getElementById('pythonArea');
         const runPython = document.getElementById('runPython');
@@ -307,24 +300,19 @@
 
         togglePython.addEventListener('click', () => {
             pythonArea.style.display = pythonArea.style.display === 'none' ? 'block' : 'none';
-            updateLanguage();
         });
         toggleTurtle.addEventListener('click', () => {
             turtleContainer.style.display = turtleContainer.style.display === 'none' ? 'block' : 'none';
-            updateLanguage();
         });
         runPython.addEventListener('click', async () => {
             const code = document.getElementById('pythonCode').value;
             outputEl.textContent = '';
             const outf = t => outputEl.textContent += t + '\n';
             Sk.configure({ output: outf, read: x => Sk.builtinFiles.files[x], __future__: Sk.python3, turtle: { canvasID: "__canvas__", width: 480, height: 360 } });
-            try {
-                await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true));
-            } catch (err) {
-                outputEl.textContent = "⚠️ " + err.toString();
-            }
+            try { await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true)); }
+            catch (err) { outputEl.textContent = "⚠️ " + err.toString(); }
         });
-        updateLanguage();
+
         particlesJS.load('particles-js', 'https://cdn.jsdelivr.net/gh/VincentGarreau/particles.js/demo/particles.json');
     </script>
 </body>
