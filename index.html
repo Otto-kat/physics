@@ -158,17 +158,17 @@
                 <h2 id="title">自然窥探者 · Firebase + Supabase 上传测试</h2>
                 <div class="small" id="desc">上传 PDF、图片、Excel 等评论，全网可见</div>
             </div>
+            <button id="toggleLang">🌏 English</button>
         </div>
 
-        <label class="small" for="cName">名字 (必填)</label>
+        <label class="small" id="labelName" for="cName">名字 (必填)</label>
         <input id="cName" placeholder="名字 (必填)">
-        <label class="small" for="cEmail">邮箱 (可选)</label>
+        <label class="small" id="labelEmail" for="cEmail">邮箱 (可选)</label>
         <input id="cEmail" placeholder="邮箱 (可选)">
-        <label class="small" for="cText">评论内容 (支持 Markdown + LaTeX)</label>
+        <label class="small" id="labelText" for="cText">评论内容 (支持 Markdown + LaTeX)</label>
         <textarea id="cText" style="min-height:140px;" placeholder="输入 Markdown，可包含 $E=mc^2$"></textarea>
 
-        <!-- ✅ 上传多类型文件 -->
-        <label class="small" for="cFile">上传文件（PDF / PNG / JPG / XLSX / CSV / TXT / DOCX）</label>
+        <label class="small" id="labelFile" for="cFile">上传文件（PDF / PNG / JPG / XLSX / CSV / TXT / DOCX）</label>
         <input id="cFile" type="file" accept=".pdf,.png,.jpg,.jpeg,.xlsx,.csv,.txt,.docx">
 
         <div style="margin-top:10px;">
@@ -177,15 +177,14 @@
         </div>
 
         <div style="margin-top:14px;">
-            <div class="small">Markdown 实时预览</div>
+            <div class="small" id="mdPreviewLabel">Markdown 实时预览</div>
             <div id="markdownPreview">*Markdown 实时预览 / Live Preview*</div>
         </div>
 
-        <!-- ✅ Python 编译区 -->
         <div style="margin-top:16px;">
             <button id="togglePython">🐍 打开 Python 编译区</button>
             <div id="pythonArea">
-                <div class="small">在下方编写 Python 代码，可直接运行：</div>
+                <div class="small" id="pythonTip">在下方编写 Python 代码，可直接运行：</div>
                 <textarea id="pythonCode" placeholder="print('Hello, Python!')"></textarea>
                 <div style="margin-top:8px;">
                     <label class="small"><input type="checkbox" id="savePythonResult"> 将运行结果保留到评论区</label>
@@ -201,11 +200,11 @@
             </div>
         </div>
 
-        <h3 style="margin-top:18px;">已有评论</h3>
+        <h3 id="commentTitle" style="margin-top:18px;">已有评论</h3>
         <div id="commentsContainer"></div>
     </div>
 
-    <footer>“If you want to find the secrets of the universe, think in terms of energy, frequency and vibration.” — Nikola Tesla</footer>
+    <footer id="footerText">“If you want to find the secrets of the universe, think in terms of energy, frequency and vibration.” — Nikola Tesla</footer>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
@@ -222,18 +221,73 @@
             appId: "1:870998893975:web:ce4b1d412168e07b5390d2"
         };
         const supabaseUrl = "https://isnamqcyzimvlmaiczeu.supabase.co";
-        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzbmFtcWN5emltdmxtYWljemV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTQwODEsImV4cCI6MjA3ODAzMDA4MX0.WcwFDqu-22xMWanw3mWqrIN2M1llNBI-bDrO3QkmlMI";
+        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
         const supabase = createClient(supabaseUrl, supabaseKey);
         const db = getFirestore(initializeApp(firebaseConfig));
 
-        /* ✅ 提交评论 + 上传文件 */
+        // ======================
+        // 🌏 多语言切换
+        // ======================
+        const langData = {
+            zh: {
+                title: "自然窥探者 · Firebase + Supabase 上传测试",
+                desc: "上传 PDF、图片、Excel 等评论，全网可见",
+                labelName: "名字 (必填)",
+                labelEmail: "邮箱 (可选)",
+                labelText: "评论内容 (支持 Markdown + LaTeX)",
+                labelFile: "上传文件（PDF / PNG / JPG / XLSX / CSV / TXT / DOCX）",
+                addComment: "提交评论",
+                mdPreviewLabel: "Markdown 实时预览",
+                pythonTip: "在下方编写 Python 代码，可直接运行：",
+                togglePython: "🐍 打开 Python 编译区",
+                toggleTurtle: "🧩 显示 Turtle 绘图区",
+                runPython: "▶️ 运行代码",
+                commentTitle: "已有评论",
+                footerText: "“如果你想理解宇宙的秘密，请思考能量、频率和振动。” — 尼古拉·特斯拉",
+                toggleLang: "🌏 English"
+            },
+            en: {
+                title: "Nature Observer · Firebase + Supabase Upload Test",
+                desc: "Upload PDF, Images, Excel files and comments — visible to all users",
+                labelName: "Name (required)",
+                labelEmail: "Email (optional)",
+                labelText: "Comment content (supports Markdown + LaTeX)",
+                labelFile: "Upload file (PDF / PNG / JPG / XLSX / CSV / TXT / DOCX)",
+                addComment: "Submit Comment",
+                mdPreviewLabel: "Markdown Live Preview",
+                pythonTip: "Write Python code below and run directly:",
+                togglePython: "🐍 Open Python Editor",
+                toggleTurtle: "🧩 Show Turtle Canvas",
+                runPython: "▶️ Run Code",
+                commentTitle: "Existing Comments",
+                footerText: "“If you want to find the secrets of the universe, think in terms of energy, frequency and vibration.” — Nikola Tesla",
+                toggleLang: "🌏 中文"
+            }
+        };
+
+        let currentLang = localStorage.getItem("lang") || "zh";
+        function setLang(lang) {
+            currentLang = lang;
+            localStorage.setItem("lang", lang);
+            const data = langData[lang];
+            for (const key in data) {
+                const el = document.getElementById(key);
+                if (el) el.textContent = data[key];
+            }
+        }
+        document.getElementById("toggleLang").onclick = () => setLang(currentLang === "zh" ? "en" : "zh");
+        setLang(currentLang);
+
+        // ======================
+        // 💬 评论系统
+        // ======================
         document.getElementById("addComment").addEventListener("click", async () => {
             const name = cName.value.trim();
             const text = cText.value.trim();
             const file = cFile.files[0];
             const status = uploadStatus;
-            if (!name || !text) return alert("请填写名字和评论内容！");
-            status.textContent = "⏳ 上传中...";
+            if (!name || !text) return alert(currentLang === "zh" ? "请填写名字和评论内容！" : "Please fill in your name and comment!");
+            status.textContent = currentLang === "zh" ? "⏳ 上传中..." : "⏳ Uploading...";
 
             let fileUrl = null, fileName = null;
             try {
@@ -245,18 +299,16 @@
                     fileUrl = supabase.storage.from("p").getPublicUrl(filePath).data.publicUrl;
                     fileName = file.name;
                 }
-
                 await addDoc(collection(db, "comments"), { name, text, fileUrl, fileName, ts: serverTimestamp() });
-                status.textContent = "✅ 上传成功";
+                status.textContent = currentLang === "zh" ? "✅ 上传成功" : "✅ Uploaded successfully";
                 cText.value = ""; cFile.value = "";
                 renderComments();
             } catch (e) {
                 console.error(e);
-                status.textContent = "❌ 上传失败";
+                status.textContent = currentLang === "zh" ? "❌ 上传失败" : "❌ Upload failed";
             }
         });
 
-        /* ✅ 渲染评论 + 显示时间 */
         async function renderComments() {
             const c = commentsContainer;
             c.innerHTML = "<div class='small'>加载中...</div>";
@@ -269,26 +321,34 @@
                 const el = document.createElement("div");
                 el.className = "comment";
                 el.innerHTML = `
-                    <b>${d.name || "访客"}</b>
-                    <span class="small" style="float:right;">🕓 ${dateStr}</span><br>
-                    ${marked.parse(d.text || "")}
-                    ${d.fileUrl ? `<br><a class='file-link' href='${d.fileUrl}' target='_blank'>📎 ${d.fileName}</a>` : ""}
-                `;
+                        <b>${d.name || "访客"}</b>
+                        <span class="small" style="float:right;">🕓 ${dateStr}</span><br>
+                        ${marked.parse(d.text || "")}
+                        ${d.fileUrl ? `<br><a class='file-link' href='${d.fileUrl}' target='_blank'>📎 ${d.fileName}</a>` : ""}
+                    `;
                 c.appendChild(el);
                 if (window.MathJax?.typesetPromise) MathJax.typesetPromise([el]);
             });
-            if (!snap.size) c.innerHTML = "<div class='small'>暂无评论</div>";
+            if (!snap.size) c.innerHTML = currentLang === "zh" ? "<div class='small'>暂无评论</div>" : "<div class='small'>No comments yet</div>";
         }
         renderComments();
 
-        /* ✅ Python 功能 */
+        // ======================
+        // 🐍 Python 模块
+        // ======================
         togglePython.onclick = () => pythonArea.style.display = pythonArea.style.display === "none" ? "block" : "none";
         toggleTurtle.onclick = () => turtleContainer.style.display = turtleContainer.style.display === "none" ? "block" : "none";
+
         runPython.onclick = async () => {
             const code = pythonCode.value;
             const out = pythonOutput; out.textContent = "";
             const outf = t => out.textContent += t + "\n";
-            Sk.configure({ output: outf, read: x => Sk.builtinFiles.files[x], __future__: Sk.python3, turtle: { canvasID: "__canvas__", width: 480, height: 360 } });
+            Sk.configure({
+                output: outf,
+                read: x => Sk.builtinFiles.files[x],
+                __future__: Sk.python3,
+                turtle: { canvasID: "__canvas__", width: 480, height: 360 }
+            });
             try {
                 await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true));
                 if (savePythonResult.checked) {
@@ -297,17 +357,18 @@
                     await addDoc(collection(db, "comments"), { name, text, ts: serverTimestamp() });
                     renderComments();
                 }
-            }
-            catch (e) { out.textContent = "⚠️ " + e.toString(); }
+            } catch (e) { out.textContent = "⚠️ " + e.toString(); }
         };
 
-        /* ✅ Markdown 实时预览 */
+        // ======================
+        // 🧮 Markdown 实时预览
+        // ======================
         cText.addEventListener("input", () => {
             markdownPreview.innerHTML = marked.parse(cText.value || "*Markdown 实时预览 / Live Preview*");
             if (window.MathJax?.typesetPromise) MathJax.typesetPromise([markdownPreview]);
         });
 
-        /* ✅ 粒子背景 */
+        // 🌌 粒子背景
         particlesJS.load('particles-js', 'https://cdn.jsdelivr.net/gh/VincentGarreau/particles.js/demo/particles.json');
     </script>
 </body>
