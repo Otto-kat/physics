@@ -245,8 +245,8 @@
             try {
                 if (file) {
                     const filePath = `uploads/${Date.now()}-${file.name}`;
-                    const { data, error } = await supabase.storage.from("public").upload(filePath, file, { upsert: true });
-                    if (error) throw error;
+                    const { error: uploadError } = await supabase.storage.from("public").upload(filePath, file);
+                    if (uploadError) throw uploadError;
                     const { data: publicUrl } = supabase.storage.from("public").getPublicUrl(filePath);
                     fileUrl = publicUrl.publicUrl;
                     fileName = file.name;
@@ -293,8 +293,15 @@
             const out = pythonOutput; out.textContent = "";
             const outf = t => out.textContent += t + "\n";
             Sk.configure({ output: outf, read: x => Sk.builtinFiles.files[x], __future__: Sk.python3, turtle: { canvasID: "__canvas__", width: 480, height: 360 } });
-            try { await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true)); }
-            catch (e) { out.textContent = "⚠️ " + e.toString(); }
+            try {
+                await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true));
+                if (savePythonResult.checked) {
+                    cText.value += `\n\n---\n**Python 输出：**\n\`\`\`\n${out.textContent}\n\`\`\`\n`;
+                    markdownPreview.innerHTML = marked.parse(cText.value);
+                }
+            } catch (e) {
+                out.textContent = "⚠️ " + e.toString();
+            }
         };
 
         /* Markdown 实时预览 */
