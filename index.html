@@ -151,7 +151,6 @@
             font-family: monospace;
         }
 
-        /* 🧭 新增：储存条样式 */
         .progress-bar {
             height: 10px;
             width: 100%;
@@ -166,6 +165,14 @@
             width: 0%;
             background: var(--accent);
             transition: width 0.3s ease;
+        }
+
+        footer {
+            text-align: center;
+            color: var(--muted);
+            margin-top: 40px;
+            font-style: italic;
+            font-size: 15px;
         }
     </style>
 </head>
@@ -193,7 +200,7 @@
 
         <div style="margin-top:14px;"><div class="small">Markdown 实时预览</div><div id="markdownPreview">*Markdown 实时预览 / Live Preview*</div></div>
 
-        <!-- ✅ Python 编译区 -->
+        <!-- ✅ Python 区 -->
         <div style="margin-top:16px;">
             <button id="togglePython">🐍 打开 Python 编译区</button>
             <div id="pythonArea">
@@ -207,8 +214,6 @@
                     <button id="toggleCanvas">🎨 显示绘图区</button>
                 </div>
                 <pre id="pythonOutput">（运行结果将在此显示）</pre>
-
-                <!-- ✅ 🐢 Turtle 绘图区 -->
                 <div id="turtleContainer" style="margin-top:10px;text-align:center;display:none;">
                     <canvas id="__canvas__" width="480" height="360" style="background:#fff;border-radius:8px;"></canvas>
                     <div class="progress-bar"><div id="drawProgress" class="progress-fill"></div></div>
@@ -221,13 +226,18 @@
         <div class="small" id="storageUsage" style="margin-top:16px;">💾 加载中...</div>
     </div>
 
-    <!-- ✅ JS 主逻辑（仅修改了 Python 部分） -->
+    <footer>
+        “If you want to find the secrets of the universe, think in terms of energy, frequency and vibration.” — N. Tesla
+    </footer>
+
+    <!-- ✅ 主逻辑 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
         import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
         import { marked } from "https://cdn.jsdelivr.net/npm/marked@12.0.2/lib/marked.esm.js";
 
+        // ✅ Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCPDiyZtMUe_RNudnvXmaZGUfwhJjKVXOs",
             authDomain: "my-light-site.firebaseapp.com",
@@ -236,10 +246,11 @@
             messagingSenderId: "870998893975",
             appId: "1:870998893975:web:ce4b1d412168e07b5390d2"
         };
-        const supabaseUrl = "https://isnamqcyzimvlmaiczeu.supabase.co";
-        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
-        const supabase = createClient(supabaseUrl, supabaseKey);
         const db = getFirestore(initializeApp(firebaseConfig));
+
+        // ✅ Supabase
+        const supabase = createClient("https://isnamqcyzimvlmaiczeu.supabase.co",
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9");
 
         const addBtn = document.getElementById('addComment');
         const textArea = document.getElementById('cText');
@@ -260,8 +271,8 @@
                 const el = document.createElement('div');
                 el.className = "comment";
                 el.innerHTML = `<div style='display:flex;justify-content:space-between;'>
-                      <b>${c.name || '访客'}</b>
-                      <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span>
+                        <b>${c.name || '访客'}</b>
+                        <span class='small'>${c.ts?.toDate ? c.ts.toDate().toLocaleString() : ''}</span>
                     </div>
                     <div>${marked.parse(c.text || "")}</div>
                     ${c.fileUrl ? `<a class='file-link' href='${c.fileUrl}' target='_blank'>📎 ${c.fileName}</a>` : ''}`;
@@ -272,7 +283,7 @@
         }
         renderComments();
 
-        /* ✅ Python 部分 */
+        /* ✅ Python 执行区 */
         const togglePython = document.getElementById('togglePython');
         const pythonArea = document.getElementById('pythonArea');
         const runPython = document.getElementById('runPython');
@@ -282,62 +293,42 @@
         const toggleCanvas = document.getElementById('toggleCanvas');
         const drawProgress = document.getElementById('drawProgress');
 
-        togglePython.addEventListener('click', () => {
+        togglePython.onclick = () => {
             const show = pythonArea.style.display === 'none';
             pythonArea.style.display = show ? 'block' : 'none';
             togglePython.textContent = show ? '❌ 关闭 Python 编译区' : '🐍 打开 Python 编译区';
-        });
+        };
 
-        toggleCanvas.addEventListener('click', () => {
-            const visible = turtleContainer.style.display === 'none';
-            turtleContainer.style.display = visible ? 'block' : 'none';
-            toggleCanvas.textContent = visible ? '🖼️ 隐藏绘图区' : '🎨 显示绘图区';
-        });
+        toggleCanvas.onclick = () => {
+            const show = turtleContainer.style.display === 'none';
+            turtleContainer.style.display = show ? 'block' : 'none';
+            toggleCanvas.textContent = show ? '🖼️ 隐藏绘图区' : '🎨 显示绘图区';
+        };
 
-        runPython.addEventListener('click', async () => {
+        runPython.onclick = async () => {
             const code = document.getElementById('pythonCode').value;
             outputEl.textContent = '';
             drawProgress.style.width = "0%";
-            const canvas = document.getElementById('__canvas__');
+            const outf = t => outputEl.textContent += t + '\n';
+            Sk.configure({ output: outf, read: x => Sk.builtinFiles.files[x], __future__: Sk.python3, turtle: { canvasID: "__canvas__" } });
 
-            const outf = text => outputEl.textContent += text + '\n';
-            Sk.configure({
-                output: outf,
-                read: x => Sk.builtinFiles.files[x],
-                __future__: Sk.python3,
-                turtle: { canvasID: "__canvas__", width: 480, height: 360 }
-            });
-
-            // 动态演示绘制进度条
-            let pct = 0;
-            const timer = setInterval(() => {
-                pct = Math.min(100, pct + 5);
-                drawProgress.style.width = pct + "%";
-                if (pct >= 100) clearInterval(timer);
-            }, 400);
-
+            let pct = 0; const timer = setInterval(() => { pct = Math.min(100, pct + 5); drawProgress.style.width = pct + "%"; if (pct >= 100) clearInterval(timer); }, 300);
             try {
                 await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true));
-                if (savePythonResult.checked) {
-                    const name = document.getElementById('cName').value.trim() || 'Python 用户';
-                    const text = "```\n" + code + "\n```\n\n**运行结果：**\n```\n" + outputEl.textContent + "\n```";
-                    await addDoc(collection(db, "comments"), { name, text, fileUrl: "", fileName: "", ts: serverTimestamp() });
-                    renderComments();
-                }
-            } catch (err) {
-                outputEl.textContent += "\n⚠️ " + err.toString();
-            } finally {
-                clearInterval(timer);
-                drawProgress.style.width = "100%";
-            }
-        });
+            } catch (err) { outputEl.textContent += "\n⚠️ " + err; }
+            clearInterval(timer);
+            drawProgress.style.width = "100%";
+        };
     </script>
 
     <script>
         particlesJS("particles-js", {
             particles: {
-                number: { value: 80 }, color: { value: "#60a5fa" }, shape: { type: "circle" },
-                opacity: { value: 0.45 }, size: { value: 2 },
+                number: { value: 80 },
+                color: { value: "#60a5fa" },
+                shape: { type: "circle" },
+                opacity: { value: 0.45 },
+                size: { value: 2 },
                 line_linked: { enable: true, distance: 120, color: "#60a5fa", opacity: 0.2, width: 1 },
                 move: { enable: true, speed: 1.2, out_mode: "bounce" }
             },
@@ -347,3 +338,4 @@
     </script>
 </body>
 </html>
+
