@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>自然窥探者 · Firebase + Supabase 上传测试</title>
 
-    <!-- 粒子背景 -->
+    <!-- 背景粒子 -->
     <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
 
     <!-- 数学公式 -->
@@ -34,12 +34,12 @@
 
         body {
             font-family: Inter,"Microsoft YaHei";
-            background: linear-gradient(160deg,var(--bg1),var(--bg2));
-            color: var(--text);
             margin: 0;
             padding: 0;
             min-height: 100vh;
             overflow-x: hidden;
+            background: linear-gradient(160deg,var(--bg1),var(--bg2));
+            color: var(--text);
         }
 
         #particles-js {
@@ -53,11 +53,11 @@
 
         .card {
             background: var(--card);
+            backdrop-filter: blur(10px);
             border-radius: var(--radius);
-            padding: 18px;
             max-width: 900px;
             margin: 36px auto;
-            backdrop-filter: blur(10px);
+            padding: 18px;
         }
 
         h2 {
@@ -96,7 +96,7 @@
         }
 
         textarea {
-            font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,"Courier New",monospace;
+            font-family: ui-monospace,Menlo,monospace;
             resize: vertical;
         }
 
@@ -124,15 +124,12 @@
             border-radius: 6px;
             padding: 10px;
             border: 1px solid rgba(255,255,255,0.03);
+            margin-top: 6px;
         }
 
         #pythonArea {
             display: none;
             margin-top: 16px;
-        }
-
-        #pythonCode {
-            min-height: 120px;
         }
 
         #pythonOutput {
@@ -145,19 +142,19 @@
         }
 
         .progress-bar {
-            height: 10px;
+            height: 8px;
             width: 100%;
-            background: rgba(255,255,255,0.08);
-            border-radius: 6px;
-            margin-top: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
             overflow: hidden;
+            margin-top: 6px;
         }
 
         .progress-fill {
             height: 100%;
             width: 0%;
             background: var(--accent);
-            transition: width 0.3s ease;
+            transition: width 0.4s ease;
         }
 
         footer {
@@ -173,24 +170,25 @@
     <div id="particles-js"></div>
 
     <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-                <h2>自然窥探者 · Firebase + Supabase 上传测试</h2>
-                <div class="small">上传 PDF 或图片评论，全网可见</div>
-            </div>
-        </div>
+        <h2>自然窥探者 · Firebase + Supabase 上传测试</h2>
+        <div class="small">上传 PDF 或图片评论，全网可见</div>
 
         <label class="small" for="cName">名字 (必填)</label>
         <input id="cName" placeholder="名字 (必填)">
         <label class="small" for="cText">评论内容 (支持 Markdown + LaTeX)</label>
-        <textarea id="cText" style="min-height:140px;" placeholder="输入 Markdown，可包含 $E=mc^2$"></textarea>
+        <textarea id="cText" placeholder="输入 Markdown，可包含 $E=mc^2$ 或 $$\\int_0^1 x dx$$"></textarea>
+
+        <div class="small">实时预览：</div>
+        <div id="markdownPreview">*Markdown 实时预览 / Live Preview*</div>
+
         <label class="small" for="cFile">上传文件（PDF / PNG / JPG）</label>
         <input id="cFile" type="file" accept="application/pdf,image/png,image/jpeg">
-        <div style="margin-top:10px;"><button id="addComment">提交评论</button><span id="uploadStatus" style="margin-left:12px;color:var(--muted)"></span></div>
+        <div style="margin-top:10px;">
+            <button id="addComment">提交评论</button>
+            <span id="uploadStatus" style="margin-left:12px;color:var(--muted)"></span>
+        </div>
 
-        <div style="margin-top:14px;"><div class="small">Markdown 实时预览</div><div id="markdownPreview">*Markdown 实时预览 / Live Preview*</div></div>
-
-        <!-- ✅ Python -->
+        <!-- Python 区 -->
         <div style="margin-top:16px;">
             <button id="togglePython">🐍 打开 Python 编译区</button>
             <div id="pythonArea">
@@ -203,12 +201,15 @@
 
         <h3 style="margin-top:18px;">已有评论</h3>
         <div id="commentsContainer"></div>
-        <div class="small" id="storageUsage" style="margin-top:16px;">💾 加载中...</div>
+
+        <!-- 简易存储条 -->
+        <div style="margin-top:16px;">
+            <div class="small" id="storageLabel">💾 存储使用情况：</div>
+            <div class="progress-bar"><div id="storageBar" class="progress-fill"></div></div>
+        </div>
     </div>
 
-    <footer>
-        “If you want to find the secrets of the universe, think in terms of energy, frequency and vibration.” — N. Tesla
-    </footer>
+    <footer>“If you want to find the secrets of the universe, think in terms of energy, frequency and vibration.” — N. Tesla</footer>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
@@ -216,7 +217,7 @@
         import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
         import { marked } from "https://cdn.jsdelivr.net/npm/marked@12.0.2/lib/marked.esm.js";
 
-        // ✅ Firebase
+        // Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCPDiyZtMUe_RNudnvXmaZGUfwhJjKVXOs",
             authDomain: "my-light-site.firebaseapp.com",
@@ -227,23 +228,30 @@
         };
         const db = getFirestore(initializeApp(firebaseConfig));
 
-        // ✅ Supabase
-        const supabase = createClient("https://isnamqcyzimvlmaiczeu.supabase.co",
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTY0NzAwMDAwMCwiZXhwIjoyNjQ3MDAwMDAwfQ.R3zQ6ixrjHzqG3v-yoC6gxDCuM1kV7t8Hmtm2R8cn3o");
+        // Supabase
+        const supabase = createClient(
+            "https://isnamqcyzimvlmaiczeu.supabase.co",
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTY0NzAwMDAwMCwiZXhwIjoyNjQ3MDAwMDAwfQ.R3zQ6ixrjHzqG3v-yoC6gxDCuM1kV7t8Hmtm2R8cn3o"
+        );
 
-        const commentsContainer = document.getElementById('commentsContainer');
-        const addBtn = document.getElementById('addComment');
-        const cName = document.getElementById('cName');
-        const cText = document.getElementById('cText');
-        const cFile = document.getElementById('cFile');
-        const statusEl = document.getElementById('uploadStatus');
-        const usageEl = document.getElementById('storageUsage');
-        const previewDiv = document.getElementById('markdownPreview');
+        // 元素引用
+        const commentsContainer = document.getElementById("commentsContainer");
+        const addBtn = document.getElementById("addComment");
+        const cName = document.getElementById("cName");
+        const cText = document.getElementById("cText");
+        const cFile = document.getElementById("cFile");
+        const statusEl = document.getElementById("uploadStatus");
+        const previewDiv = document.getElementById("markdownPreview");
+        const bar = document.getElementById("storageBar");
+        const label = document.getElementById("storageLabel");
 
         marked.setOptions({ breaks: true, gfm: true });
 
         // 实时预览
-        cText.addEventListener("input", () => previewDiv.innerHTML = marked.parse(cText.value));
+        cText.addEventListener("input", () => {
+            previewDiv.innerHTML = marked.parse(cText.value);
+            if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([previewDiv]);
+        });
 
         // 渲染评论
         async function renderComments() {
@@ -253,10 +261,11 @@
             commentsContainer.innerHTML = "";
             snap.forEach(doc => {
                 const c = doc.data();
-                const el = document.createElement('div');
+                const el = document.createElement("div");
                 el.className = "comment";
                 el.innerHTML = `<b>${c.name || "访客"}</b><div>${marked.parse(c.text || "")}</div>${c.fileUrl ? `<a class='file-link' href='${c.fileUrl}' target='_blank'>📎 ${c.fileName}</a>` : ""}`;
                 commentsContainer.appendChild(el);
+                if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([el]);
             });
             if (!snap.size) commentsContainer.innerHTML = "<div class='small'>暂无评论</div>";
         }
@@ -264,48 +273,52 @@
 
         // 上传评论
         addBtn.onclick = async () => {
-            const name = cName.value.trim(); const text = cText.value.trim();
+            const name = cName.value.trim(), text = cText.value.trim();
             if (!name || !text) { alert("请填写名字和评论内容"); return; }
             statusEl.textContent = "正在上传...";
             let fileUrl = "", fileName = "";
             if (cFile.files.length > 0) {
                 const f = cFile.files[0];
                 fileName = f.name;
-                const { data, error } = await supabase.storage.from("public").upload("uploads/" + Date.now() + "_" + f.name, f);
+                const path = "uploads/" + Date.now() + "_" + f.name;
+                const { error } = await supabase.storage.from("public").upload(path, f);
                 if (error) { statusEl.textContent = "❌ 上传失败：" + error.message; return; }
-                const { data: pub } = supabase.storage.from("public").getPublicUrl("uploads/" + Date.now() + "_" + f.name);
+                const { data: pub } = supabase.storage.from("public").getPublicUrl(path);
                 fileUrl = pub.publicUrl;
             }
             await addDoc(collection(db, "comments"), { name, text, fileUrl, fileName, ts: serverTimestamp() });
             statusEl.textContent = "✅ 已提交！";
-            cText.value = ""; cFile.value = ""; renderComments();
+            cText.value = ""; cFile.value = ""; renderComments(); updateStorageUsage();
         };
 
-        // Python运行
-        document.getElementById('togglePython').onclick = () => {
-            const area = document.getElementById('pythonArea');
-            const show = area.style.display === 'none';
-            area.style.display = show ? 'block' : 'none';
+        // Python区
+        document.getElementById("togglePython").onclick = () => {
+            const area = document.getElementById("pythonArea");
+            const show = area.style.display === "none";
+            area.style.display = show ? "block" : "none";
         };
-        document.getElementById('runPython').onclick = async () => {
-            const code = document.getElementById('pythonCode').value;
-            const out = document.getElementById('pythonOutput');
-            out.textContent = '';
+        document.getElementById("runPython").onclick = async () => {
+            const code = document.getElementById("pythonCode").value;
+            const out = document.getElementById("pythonOutput");
+            out.textContent = "";
             Sk.configure({ output: (t) => out.textContent += t + "\n", read: x => Sk.builtinFiles.files[x], __future__: Sk.python3, turtle: { canvasID: "__canvas__" } });
             try { await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true)); }
             catch (e) { out.textContent += "\n⚠️ " + e; }
         };
 
-        // 显示存储条
+        // 更新存储条
         async function updateStorageUsage() {
             try {
                 const { data, error } = await supabase.storage.from("public").list("uploads");
                 if (error) throw error;
-                let totalSize = 0;
-                data.forEach(f => { if (f.metadata) totalSize += f.metadata.size || 0; });
-                usageEl.textContent = "💾 当前存储约 " + (totalSize / 1024 / 1024).toFixed(2) + " MB";
+                let total = 0;
+                data.forEach(f => { if (f.metadata) total += f.metadata.size || 0; });
+                const usedMB = total / 1024 / 1024;
+                const pct = Math.min(100, (usedMB / 100) * 100);
+                bar.style.width = pct + "%";
+                label.textContent = "💾 当前存储约 " + usedMB.toFixed(2) + " MB";
             } catch (e) {
-                usageEl.textContent = "⚠️ 无法读取存储：" + e.message;
+                label.textContent = "⚠️ 无法读取存储：" + e.message;
             }
         }
         updateStorageUsage();
@@ -314,11 +327,8 @@
     <script>
         particlesJS("particles-js", {
             particles: {
-                number: { value: 80 },
-                color: { value: "#60a5fa" },
-                shape: { type: "circle" },
-                opacity: { value: 0.45 },
-                size: { value: 2 },
+                number: { value: 80 }, color: { value: "#60a5fa" }, shape: { type: "circle" },
+                opacity: { value: 0.45 }, size: { value: 2 },
                 line_linked: { enable: true, distance: 120, color: "#60a5fa", opacity: 0.2, width: 1 },
                 move: { enable: true, speed: 1.2, out_mode: "bounce" }
             },
