@@ -96,7 +96,7 @@
         }
 
         textarea {
-            font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,"Courier New",monospace;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Courier New", monospace;
             resize: vertical;
         }
 
@@ -193,12 +193,15 @@
                 <div style="margin-top:8px;">
                     <label class="small"><input type="checkbox" id="savePythonResult"> 将运行结果保留到评论区</label>
                 </div>
-                <div style="margin-top:8px;"><button id="runPython">▶️ 运行代码</button></div>
+                <div style="margin-top:8px;">
+                    <button id="runPython">▶️ 运行代码</button>
+                    <button id="toggleTurtle">🧩 显示 Turtle 绘图区</button>
+                </div>
                 <pre id="pythonOutput">（运行结果将在此显示）</pre>
 
                 <!-- ✅ 🐢 Turtle 绘图区 -->
-                <div id="turtleContainer" style="margin-top:10px;text-align:center;">
-                    <canvas id="__canvas__" width="480" height="360" style="background:#fff;border-radius:8px;display:none;"></canvas>
+                <div id="turtleContainer" style="margin-top:10px;text-align:center;display:none;">
+                    <canvas id="__canvas__" width="480" height="360" style="background:#fff;border-radius:8px;"></canvas>
                 </div>
             </div>
         </div>
@@ -242,6 +245,8 @@
         const langToggle = document.getElementById('langToggle');
 
         marked.setOptions({ breaks: true, gfm: true });
+
+        // ✅ 中英文切换
         let lang = 'zh';
         const texts = {
             zh: { title: "自然窥探者 · Firebase + Supabase 上传测试", desc: "上传 PDF 或图片评论，全网可见", submit: "提交评论", switch: "🌐 English" },
@@ -257,6 +262,7 @@
             showStorageUsage();
         });
 
+        // ✅ Markdown 实时预览
         textArea.addEventListener('input', async () => {
             previewDiv.innerHTML = marked.parse(textArea.value || "*Markdown 实时预览 / Live Preview*");
             if (window.MathJax && MathJax.typesetPromise) { await MathJax.typesetPromise([previewDiv]); }
@@ -331,18 +337,22 @@
         const outputEl = document.getElementById('pythonOutput');
         const savePythonResult = document.getElementById('savePythonResult');
         const turtleContainer = document.getElementById('turtleContainer');
+        const toggleTurtle = document.getElementById('toggleTurtle');
 
         togglePython.addEventListener('click', () => {
             pythonArea.style.display = pythonArea.style.display === 'none' ? 'block' : 'none';
             togglePython.textContent = pythonArea.style.display === 'none' ? '🐍 打开 Python 编译区' : '❌ 关闭 Python 编译区';
         });
 
+        toggleTurtle.addEventListener('click', () => {
+            const show = turtleContainer.style.display === 'none';
+            turtleContainer.style.display = show ? 'block' : 'none';
+            toggleTurtle.textContent = show ? '🧩 隐藏 Turtle 绘图区' : '🧩 显示 Turtle 绘图区';
+        });
+
         runPython.addEventListener('click', async () => {
             const code = document.getElementById('pythonCode').value;
             outputEl.textContent = '';
-
-            // ✅ 重建 canvas，防止 null 错误
-            turtleContainer.innerHTML = '<canvas id="__canvas__" width="480" height="360" style="background:#fff;border-radius:8px;"></canvas>';
             const canvas = document.getElementById('__canvas__');
 
             const outf = text => outputEl.textContent += text + '\n';
@@ -357,17 +367,15 @@
                 if (savePythonResult.checked) {
                     const name = document.getElementById('cName').value.trim() || 'Python 用户';
                     const text = "```\n" + code + "\n```\n\n**运行结果：**\n```\n" + outputEl.textContent + "\n```";
-                    await addDoc(collection(db, "comments"), { name, text, fileUrl: "", fileName: "", ts: serverTimestamp() });
+                    await addDoc(collection(db, "comments"), { name, text, ts: serverTimestamp() });
                     renderComments();
                 }
             } catch (err) {
-                outputEl.textContent += "\n⚠️ " + err.toString();
+                outputEl.textContent = "⚠️ " + err.toString();
             }
         });
-    </script>
 
-    <script>
-        particlesJS("particles-js", {
-            particles: {
-                number: { value: 80 }, color: { value: "#60a5fa" }, shape: { type: "circle" },
-                opacity: { value: 0.45 }, size: { value: 2 },
+        particlesJS.load('particles-js', 'https://cdn.jsdelivr.net/gh/VincentGarreau/particles.js/demo/particles.json');
+    </script>
+</body>
+</html>
