@@ -126,31 +126,9 @@
             border: 1px solid rgba(255,255,255,0.03);
         }
 
-        .lang-switch {
-            float: right;
-            font-size: 13px;
-            color: var(--muted);
-            cursor: pointer;
-        }
-
-        #pythonArea {
-            display: none;
-            margin-top: 16px;
-        }
-
-        #pythonOutput {
-            background: rgba(0,0,0,0.3);
-            border-radius: 6px;
-            padding: 10px;
-            margin-top: 8px;
-            white-space: pre-wrap;
-            font-family: monospace;
-        }
-
         footer {
             text-align: center;
             color: var(--muted);
-            font-style: italic;
             margin: 40px 0 20px;
             font-size: 14px;
         }
@@ -159,55 +137,28 @@
 <body>
     <div id="particles-js"></div>
     <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-                <h2 id="title">自然窥探者 · Firebase + Supabase 上传测试</h2>
-                <div class="small" id="desc">上传 PDF、图片或 Excel 文件，全网可见</div>
-            </div>
-            <span class="lang-switch" id="langToggle">🌐 English</span>
-        </div>
+        <h2>自然窥探者 · Firebase + Supabase 上传测试</h2>
+        <div class="small">上传 PDF、图片或 Excel 文件，全网可见</div>
 
-        <label class="small" for="cName" id="labelName">名字 (必填)</label>
+        <label class="small">名字</label>
         <input id="cName" placeholder="名字 (必填)">
-        <label class="small" for="cEmail" id="labelEmail">邮箱 (可选)</label>
-        <input id="cEmail" placeholder="邮箱 (可选)">
-        <label class="small" for="cText" id="labelComment">评论内容 (支持 Markdown + LaTeX)</label>
-        <textarea id="cText" style="min-height:140px;" placeholder="输入 Markdown，可包含 $E=mc^2$"></textarea>
-        <label class="small" for="cFile" id="labelFile">上传文件（PDF / PNG / JPG / XLSX / CSV）</label>
+        <label class="small">评论内容</label>
+        <textarea id="cText" placeholder="输入 Markdown，可包含 $E=mc^2$"></textarea>
+        <label class="small">上传文件</label>
         <input id="cFile" type="file" accept=".pdf,.png,.jpg,.jpeg,.xlsx,.csv">
         <div style="margin-top:10px;">
             <button id="addComment">提交评论</button>
             <span id="uploadStatus" style="margin-left:12px;color:var(--muted)"></span>
         </div>
 
-        <div style="margin-top:14px;">
-            <div class="small" id="previewTitle">Markdown 实时预览</div>
+        <div style="margin-top:10px;">
+            <div class="small">Markdown 实时预览</div>
             <div id="markdownPreview">*Markdown 实时预览 / Live Preview*</div>
         </div>
 
-        <!-- Python 区 -->
-        <div style="margin-top:16px;">
-            <button id="togglePython">🐍 打开 Python 编译区</button>
-            <div id="pythonArea">
-                <div class="small">在下方编写 Python 代码，可直接运行：</div>
-                <textarea id="pythonCode" placeholder="print('Hello, Python!')"></textarea>
-                <div style="margin-top:8px;">
-                    <label class="small"><input type="checkbox" id="savePythonResult"> 将运行结果保留到评论区</label>
-                </div>
-                <div style="margin-top:8px;">
-                    <button id="runPython">▶️ 运行代码</button>
-                    <button id="toggleTurtle">🧩 显示 Turtle 绘图区</button>
-                </div>
-                <pre id="pythonOutput">（运行结果将在此显示）</pre>
-                <div id="turtleContainer" style="margin-top:10px;text-align:center;display:none;">
-                    <canvas id="__canvas__" width="480" height="360" style="background:#fff;border-radius:8px;"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <h3 id="commentTitle">已有评论</h3>
+        <h3>已有评论</h3>
         <div id="commentsContainer"></div>
-        <div class="small" id="storageUsage" style="margin-top:16px;">💾 加载中...</div>
+        <div class="small" id="storageUsage" style="margin-top:16px;">💾 检查存储状态中...</div>
     </div>
 
     <footer>“If you want to find the secrets of the universe, think in terms of energy, frequency and vibration.” — Nikola Tesla</footer>
@@ -228,11 +179,22 @@
         };
 
         const supabaseUrl = "https://isnamqcyzimvlmaiczeu.supabase.co";
-        const supabaseKey = "YOUR_SUPABASE_ANON_KEY"; // ⚠️替换成有效 public key
+        const supabaseKey = "🔑 替换为你自己的 Supabase anon 公钥"; // ⚠️ 必改
         const supabase = createClient(supabaseUrl, supabaseKey);
         const db = getFirestore(initializeApp(firebaseConfig));
 
-        /* 上传评论 */
+        async function checkStorageUsage() {
+            try {
+                const { data, error } = await supabase.storage.from("public").list("uploads", { limit: 100 });
+                if (error) throw error;
+                document.getElementById("storageUsage").textContent =
+                    `📂 当前文件数：${data.length} （Bucket 正常）`;
+            } catch (e) {
+                document.getElementById("storageUsage").textContent =
+                    "⚠️ 存储访问失败：" + e.message;
+            }
+        }
+
         document.getElementById("addComment").addEventListener("click", async () => {
             const name = cName.value.trim();
             const text = cText.value.trim();
@@ -245,23 +207,26 @@
             try {
                 if (file) {
                     const filePath = `uploads/${Date.now()}-${file.name}`;
-                    const { data, error } = await supabase.storage.from("public").upload(filePath, file, { upsert: true });
+                    const { error } = await supabase.storage.from("public").upload(filePath, file, { upsert: true });
                     if (error) throw error;
                     const { data: publicUrl } = supabase.storage.from("public").getPublicUrl(filePath);
                     fileUrl = publicUrl.publicUrl;
                     fileName = file.name;
                 }
-                await addDoc(collection(db, "comments"), { name, text, fileUrl, fileName, ts: serverTimestamp() });
+
+                await addDoc(collection(db, "comments"), {
+                    name, text, fileUrl, fileName, ts: serverTimestamp()
+                });
                 status.textContent = "✅ 上传成功";
                 cText.value = ""; cFile.value = "";
                 renderComments();
+                checkStorageUsage();
             } catch (e) {
                 console.error(e);
-                status.textContent = "❌ 上传失败";
+                status.textContent = "❌ 上传失败：" + e.message;
             }
         });
 
-        /* 渲染评论 */
         async function renderComments() {
             const c = commentsContainer;
             c.innerHTML = "<div class='small'>加载中...</div>";
@@ -283,27 +248,9 @@
             });
             if (!snap.size) c.innerHTML = "<div class='small'>暂无评论</div>";
         }
+
         renderComments();
-
-        /* Python 区域逻辑 */
-        togglePython.onclick = () => pythonArea.style.display = pythonArea.style.display === "none" ? "block" : "none";
-        toggleTurtle.onclick = () => turtleContainer.style.display = turtleContainer.style.display === "none" ? "block" : "none";
-        runPython.onclick = async () => {
-            const code = pythonCode.value;
-            const out = pythonOutput; out.textContent = "";
-            const outf = t => out.textContent += t + "\n";
-            Sk.configure({ output: outf, read: x => Sk.builtinFiles.files[x], __future__: Sk.python3, turtle: { canvasID: "__canvas__", width: 480, height: 360 } });
-            try { await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true)); }
-            catch (e) { out.textContent = "⚠️ " + e.toString(); }
-        };
-
-        /* Markdown 实时预览 */
-        cText.addEventListener("input", () => {
-            markdownPreview.innerHTML = marked.parse(cText.value || "*Markdown 实时预览 / Live Preview*");
-            if (window.MathJax?.typesetPromise) MathJax.typesetPromise([markdownPreview]);
-        });
-
-        /* 粒子背景 */
+        checkStorageUsage();
         particlesJS.load('particles-js', 'https://cdn.jsdelivr.net/gh/VincentGarreau/particles.js/demo/particles.json');
     </script>
 </body>
