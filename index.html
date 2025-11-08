@@ -149,6 +149,7 @@
         }
     </style>
 </head>
+
 <body>
     <div id="particles-js"></div>
 
@@ -204,7 +205,9 @@
         <div id="commentsContainer"></div>
     </div>
 
-    <footer id="footer">“If you want to find the secrets of the universe, think in terms of energy, frequency and vibration.” — Nikola Tesla</footer>
+    <footer id="footer">
+        “If you want to find the secrets of the universe, think in terms of energy, frequency and vibration.” — Nikola Tesla
+    </footer>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
@@ -212,6 +215,7 @@
         import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
         import { marked } from "https://cdn.jsdelivr.net/npm/marked@12.0.2/lib/marked.esm.js";
 
+        // ✅ 初始化 Firebase & Supabase
         const firebaseConfig = {
             apiKey: "AIzaSyCPDiyZtMUe_RNudnvXmaZGUfwhJjKVXOs",
             authDomain: "my-light-site.firebaseapp.com",
@@ -220,14 +224,14 @@
             messagingSenderId: "870998893975",
             appId: "1:870998893975:web:ce4b1d412168e07b5390d2"
         };
-
-        const supabaseUrl = "https://isnamqcyzimvlmaiczeu.supabase.co";
-        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        const supabase = createClient(
+            "https://isnamqcyzimvlmaiczeu.supabase.co",
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        );
         const db = getFirestore(initializeApp(firebaseConfig));
-
         let currentLang = "zh";
 
+        /* ✅ 渲染评论 */
         async function renderComments() {
             const c = document.getElementById("commentsContainer");
             c.innerHTML = currentLang === "zh" ? "<div class='small'>加载中...</div>" : "<div class='small'>Loading...</div>";
@@ -237,15 +241,15 @@
                 c.innerHTML = "";
                 snap.forEach(doc => {
                     const d = doc.data();
-                    const dateStr = d.ts?.toDate ? new Date(d.ts.toDate()).toLocaleString() : (currentLang === "zh" ? "未知时间" : "Unknown time");
+                    const dateStr = d.ts?.toDate ? new Date(d.ts.toDate()).toLocaleString() : "—";
                     const el = document.createElement("div");
                     el.className = "comment";
                     el.innerHTML = `
-                            <b>${d.name || (currentLang === "zh" ? "访客" : "Visitor")}</b>
-                            <span class="small" style="float:right;">🕓 ${dateStr}</span><br>
-                            ${marked.parse(d.text || "")}
-                            ${d.fileUrl ? `<br><a class='file-link' href='${d.fileUrl}' target='_blank'>📎 ${d.fileName}</a>` : ""}
-                        `;
+                <b>${d.name || (currentLang === "zh" ? "访客" : "Visitor")}</b>
+                <span class="small" style="float:right;">🕓 ${dateStr}</span><br>
+                ${marked.parse(d.text || "")}
+                ${d.fileUrl ? `<br><a class='file-link' href='${d.fileUrl}' target='_blank'>📎 ${d.fileName}</a>` : ""}
+              `;
                     c.appendChild(el);
                     if (window.MathJax?.typesetPromise) MathJax.typesetPromise([el]);
                 });
@@ -253,17 +257,83 @@
                     c.innerHTML = currentLang === "zh" ? "<div class='small'>暂无评论</div>" : "<div class='small'>No comments yet</div>";
             } catch (e) {
                 console.error("评论加载失败：", e);
-                c.innerHTML = currentLang === "zh" ? "<div class='small'>⚠️ 评论加载失败</div>" : "<div class='small'>⚠️ Failed to load comments</div>";
+                c.innerHTML = "⚠️ 加载失败 / Failed to load comments";
             }
         }
 
-        // 初始化后再加载评论
-        window.addEventListener("load", () => {
-            renderComments();
+        /* ✅ 上传评论 */
+        addComment.onclick = async () => {
+            const name = cName.value.trim();
+            const text = cText.value.trim();
+            const file = cFile.files[0];
+            const status = uploadStatus;
+            if (!name || !text) return alert(currentLang === "zh" ? "请填写名字和评论内容！" : "Please enter your name and comment!");
+            status.textContent = "⏳ 上传中...";
+
+            try {
+                let fileUrl = null, fileName = null;
+                if (file) {
+                    const safeName = file.name.replace(/[^\w.\-]/g, "_");
+                    const path = `uploads/${Date.now()}-${safeName}`;
+                    const { error } = await supabase.storage.from("p").upload(path, file);
+                    if (error) throw error;
+                    fileUrl = supabase.storage.from("p").getPublicUrl(path).data.publicUrl;
+                    fileName = file.name;
+                }
+                await addDoc(collection(db, "comments"), { name, text, fileUrl, fileName, ts: serverTimestamp() });
+                status.textContent = "✅ 上传成功";
+                cText.value = ""; cFile.value = "";
+                renderComments();
+            } catch (e) {
+                console.error(e);
+                status.textContent = "❌ 上传失败";
+            }
+        };
+
+        /* ✅ Python */
+        togglePython.onclick = () => pythonArea.style.display = pythonArea.style.display === "none" ? "block" : "none";
+        toggleTurtle.onclick = () => turtleContainer.style.display = turtleContainer.style.display === "none" ? "block" : "none";
+        runPython.onclick = async () => {
+            const code = pythonCode.value;
+            const out = pythonOutput; out.textContent = "";
+            const outf = t => out.textContent += t + "\n";
+            Sk.configure({ output: outf, read: x => Sk.builtinFiles.files[x], __future__: Sk.python3, turtle: { canvasID: "__canvas__", width: 480, height: 360 } });
+            try {
+                await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true));
+                if (savePythonResult.checked) {
+                    const name = cName.value.trim() || "Python 用户";
+                    const text = "```\n" + code + "\n```\n\n**运行结果：**\n```\n" + out.textContent + "\n```";
+                    await addDoc(collection(db, "comments"), { name, text, ts: serverTimestamp() });
+                    renderComments();
+                }
+            } catch (e) { out.textContent = "⚠️ " + e.toString(); }
+        };
+
+        /* ✅ Markdown 实时预览 */
+        cText.addEventListener("input", () => {
+            markdownPreview.innerHTML = marked.parse(cText.value || "*Markdown 实时预览 / Live Preview*");
+            if (window.MathJax?.typesetPromise) MathJax.typesetPromise([markdownPreview]);
         });
 
-        // 其他代码保持原样……
-        // （中英文切换、上传、Python、预览部分不变）
+        /* ✅ 多语言切换 */
+        const texts = {
+            zh: { title: "自然窥探者 · Firebase + Supabase 上传测试", desc: "上传 PDF、图片、Excel 等评论，全网可见", langBtn: "🌐 English", comments: "已有评论" },
+            en: { title: "Natural Observer · Firebase + Supabase Upload Test", desc: "Upload PDF, images, Excel, or text comments — visible to everyone", langBtn: "🌐 中文", comments: "Comments" }
+        };
+        langBtn.onclick = () => {
+            currentLang = currentLang === "zh" ? "en" : "zh";
+            const t = texts[currentLang];
+            pageTitle.textContent = t.title;
+            title.textContent = t.title;
+            desc.textContent = t.desc;
+            lblComments.textContent = t.comments;
+            langBtn.textContent = t.langBtn;
+            renderComments();
+        };
+
+        /* ✅ 初始化加载 */
+        window.addEventListener("load", renderComments);
+        particlesJS.load('particles-js', 'https://cdn.jsdelivr.net/gh/VincentGarreau/particles.js/demo/particles.json');
     </script>
 </body>
 </html>
